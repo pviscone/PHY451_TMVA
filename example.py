@@ -69,8 +69,8 @@ for background in ["qcd", "zz", "wz", "ww", "single_top", "dy", "wjets"]:
     backgrounds[background] = MyAnalysis(background)
     backgrounds[background].preprocessEvents()
 
-# train_BDT(signals, backgrounds, input_features, max_depth=8, nTrees=50, train_frac=0.2)
-# plot_score_distribution()
+train_BDT(signals, backgrounds, input_features, max_depth=8, nTrees=50, train_frac=0.2)
+plot_score_distribution()
 
 samples = {**signals, **backgrounds}
 
