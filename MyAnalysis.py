@@ -1,6 +1,7 @@
 import ROOT
-import copy
+from array import array
 from Samples import samp
+import re
 
 
 class MyAnalysis(object):
@@ -71,6 +72,10 @@ class MyAnalysis(object):
         h_NBtag.SetXTitle("Number of B tagged jets")
         self.histograms["NBtag"] = h_NBtag
 
+        h_BDT = ROOT.TH1F("BDTscore", "BDT score", 25, -1.0, 1.0)
+        h_BDT.SetXTitle("BDT score")
+        self.histograms["BDTscore"] = h_BDT
+
     def saveHistos(self):
         outfilename = self.sample + "_histos.root"
         outfile = ROOT.TFile(outfilename, "RECREATE")
@@ -83,12 +88,10 @@ class MyAnalysis(object):
     ### This is the place where to implement the analysis strategy: study of most sensitive variables
     ### and signal-like event selection
 
-    def processEvent(self, entry):
+    def preprocessEvent(self, entry):
         tree = self.getTree()
         tree.GetEntry(entry)
         w = tree.EventWeight
-        print(w)
-        breakpoint()
 
         ### Muon selection - Select events with at least 1 isolated muon
         ### with pt>25 GeV to match trigger requirements
@@ -107,9 +110,57 @@ class MyAnalysis(object):
         self.histograms["NIsoMu"].Fill(nIsoMu, w)
 
     ### processEvents run the function processEvent on each event stored in the tree
+    def preprocessEvents(self):
+        nevts = self.nEvents
+        for i in range(nevts):
+            self.preprocessEvent(i)
+
+    def processEvent(self, entry):
+        tree = self.getTree()
+        tree.GetEntry(entry)
+        w = tree.EventWeight
+
+        # Implement additional cuts
+
     def processEvents(self):
         nevts = self.nEvents
         for i in range(nevts):
             self.processEvent(i)
-
         self.saveHistos()
+
+    def evaluateBDT(self, input_features):
+        var_names = ROOT.std.vector("TString")()
+        for feature in input_features:
+            var_names.push_back(ROOT.TString(feature))
+        reader = ROOT.TMVA.Reader("!Color:!Silent")
+        buffers = {}
+
+        for feat in input_features:
+            buffers[feat] = array("f", [0.0])  # Reader needs 32-bit floats
+            reader.AddVariable(feat, buffers[feat])
+
+        reader.BookMVA("BDT", "dataset/weights/BDTFactory_BDT.weights.xml")
+
+        tree = self.getTree()
+        self.friend_tree = ROOT.TTree("additional", "Friend tree with BDT scores")
+
+        bdt_output = array("f", [0.0])
+        bdt_branch = self.friend_tree.Branch("BDT_output", bdt_output, "BDT_output/F")
+
+        w = tree.EventWeight
+        formulas = {}
+        for feat in input_features:
+            formulas[feat] = ROOT.TTreeFormula(feat, feat, tree)
+        for entry in range(self.nEvents):
+            tree.GetEntry(entry)
+
+            for feat in input_features:
+                val = formulas[feat].EvalInstance()
+                buffers[feat][0] = val
+
+            out = reader.EvaluateMVA("BDT")
+            bdt_output[0] = out
+            self.histograms["BDTscore"].Fill(out, w)
+            bdt_branch.Fill()
+
+        tree.AddFriend(self.friend_tree)

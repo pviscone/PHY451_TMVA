@@ -12,7 +12,6 @@ ROOT.TH1.AddDirectory(False)
 
 
 def setStyle(histo, color, style=0, fill=0):
-
     histo.GetXaxis().SetLabelFont(42)
     histo.GetYaxis().SetLabelFont(42)
     histo.GetXaxis().SetTitleFont(42)
@@ -216,7 +215,6 @@ def getBkgHisto(var, samples):
 
 
 def getHisto(var, sample):
-
     h = ROOT.TH1F()
     filename = sample + "_histos.root"
     if not os.path.exists(filename):
@@ -240,7 +238,6 @@ def getHisto(var, sample):
 
 
 def getSigHisto(var):
-
     h = getHisto(var, "ttbar")
 
     return h

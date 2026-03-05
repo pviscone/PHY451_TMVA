@@ -1,2 +1,6 @@
 *cache*
 *.root
+*.pdf
+*.png
+*.C
+*.xml
