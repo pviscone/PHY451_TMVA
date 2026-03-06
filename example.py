@@ -6,23 +6,19 @@ signals = {}
 backgrounds = {}
 
 input_features = [
-    "NJet",
-    "Alt$(Jet_Px[0], -999)",
-    "Alt$(Jet_Px[1], -999)",
-    "Alt$(Jet_Px[2], -999)",
-    "Alt$(Jet_Px[3], -999)",
-    "Alt$(Jet_Py[0], -999)",
-    "Alt$(Jet_Py[1], -999)",
-    "Alt$(Jet_Py[2], -999)",
-    "Alt$(Jet_Py[3], -999)",
-    "Alt$(Jet_Pz[0], -999)",
-    "Alt$(Jet_Pz[1], -999)",
-    "Alt$(Jet_Pz[2], -999)",
-    "Alt$(Jet_Pz[3], -999)",
-    "Alt$(Jet_E[0], -999)",
-    "Alt$(Jet_E[1], -999)",
-    "Alt$(Jet_E[2], -999)",
-    "Alt$(Jet_E[3], -999)",
+    # "NJet",
+    "Alt$(Jet_pt[0], -999)",
+    "Alt$(Jet_pt[1], -999)",
+    "Alt$(Jet_pt[2], -999)",
+    "Alt$(Jet_pt[3], -999)",
+    "Alt$(Jet_eta[0], -999)",
+    "Alt$(Jet_eta[1], -999)",
+    "Alt$(Jet_eta[2], -999)",
+    "Alt$(Jet_eta[3], -999)",
+    "Alt$(Jet_phi[0], -999)",
+    "Alt$(Jet_phi[1], -999)",
+    "Alt$(Jet_phi[2], -999)",
+    "Alt$(Jet_phi[3], -999)",
     "Alt$(Jet_btag[0], -999)",
     "Alt$(Jet_btag[1], -999)",
     "Alt$(Jet_btag[2], -999)",
@@ -32,33 +28,28 @@ input_features = [
     "Alt$(Jet_ID[2], -999)",
     "Alt$(Jet_ID[3], -999)",
     "NMuon",
-    "Alt$(Muon_Px[0], -999)",
-    "Alt$(Muon_Px[1], -999)",
-    "Alt$(Muon_Py[0], -999)",
-    "Alt$(Muon_Py[1], -999)",
-    "Alt$(Muon_Pz[0], -999)",
-    "Alt$(Muon_Pz[1], -999)",
-    "Alt$(Muon_E[0], -999)",
-    "Alt$(Muon_E[1], -999)",
+    "Alt$(Muon_pt[0], -999)",
+    "Alt$(Muon_pt[1], -999)",
+    "Alt$(Muon_eta[0], -999)",
+    "Alt$(Muon_eta[1], -999)",
+    "Alt$(Muon_phi[0], -999)",
+    "Alt$(Muon_phi[1], -999)",
     "Alt$(Muon_Charge[0], -999)",
     "Alt$(Muon_Charge[1], -999)",
     "Alt$(Muon_Iso[0], -999)",
     "Alt$(Muon_Iso[1], -999)",
-    "NElectron",
-    "Alt$(Electron_Px[0], -999)",
-    "Alt$(Electron_Px[1], -999)",
-    "Alt$(Electron_Py[0], -999)",
-    "Alt$(Electron_Py[1], -999)",
-    "Alt$(Electron_Pz[0], -999)",
-    "Alt$(Electron_Pz[1], -999)",
-    "Alt$(Electron_E[0], -999)",
-    "Alt$(Electron_E[1], -999)",
-    "Alt$(Electron_Charge[0], -999)",
-    "Alt$(Electron_Charge[1], -999)",
-    "Alt$(Electron_Iso[0], -999)",
-    "Alt$(Electron_Iso[1], -999)",
-    "MET_px",
-    "MET_py",
+    # "NElectron",
+    # "Alt$(Electron_pt[0], -999)",
+    # "Alt$(Electron_pt[1], -999)",
+    # "Alt$(Electron_eta[0], -999)",
+    # "Alt$(Electron_eta[1], -999)",
+    # "Alt$(Electron_phi[0], -999)",
+    # "Alt$(Electron_phi[1], -999)",
+    # "Alt$(Electron_Charge[0], -999)",
+    # "Alt$(Electron_Charge[1], -999)",
+    # "Alt$(Electron_Iso[0], -999)",
+    # "Alt$(Electron_Iso[1], -999)",
+    "MET_pt",
 ]
 
 for signal in ["ttbar"]:
@@ -76,11 +67,11 @@ samples = {**signals, **backgrounds}
 
 Data = MyAnalysis("data")
 Data.preprocessEvents()
-# Data.evaluateBDT(input_features)
+Data.evaluateBDT(input_features)
 Data.processEvents()
 
 for sample in samples.values():
-    # sample.evaluateBDT(input_features)
+    sample.evaluateBDT(input_features)
     sample.processEvents()
 
 vars = ["NMuon", "Muon_Pt", "BDTscore"]

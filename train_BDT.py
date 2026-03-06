@@ -5,43 +5,21 @@ import os
 def train_BDT(
     signals, backgrounds, input_features, max_depth=8, nTrees=50, train_frac=0.2
 ):
-    """
-    Train BDT using TMVA with RDataFrame objects.
-    Works with EnableImplicitMT for parallel processing.
-
-    Parameters:
-    - signals: dict of MyAnalysis objects for signal samples
-    - backgrounds: dict of MyAnalysis objects for background samples
-    - input_features: list of feature names/expressions to use for training
-    - max_depth: maximum depth of decision trees
-    - nTrees: number of trees in the BDT
-    - train_frac: fraction of events to use for training
-    """
-
-    # Disable ImplicitMT temporarily for Snapshot to avoid issues
-    was_enabled = ROOT.IsImplicitMTEnabled()
-    if was_enabled:
-        ROOT.DisableImplicitMT()
-
     os.makedirs("files/BDT/train/signals", exist_ok=True)
     os.makedirs("files/BDT/train/backgrounds", exist_ok=True)
 
     # Snapshot RDataFrames to TTrees for TMVA
     for name, signal in signals.items():
-        cols = signal.getRDF().GetColumnNames()
+        cols = signal.rdf.GetColumnNames()
         cols = [c for c in cols if "p4" not in c and not c.startswith("Photon")]
-        signal.getRDF().Snapshot("events", f"files/BDT/train/signals/{name}.root", cols)
+        signal.rdf.Snapshot("events", f"files/BDT/train/signals/{name}.root", cols)
 
     for name, background in backgrounds.items():
-        cols = background.getRDF().GetColumnNames()
+        cols = background.rdf.GetColumnNames()
         cols = [c for c in cols if "p4" not in c and not c.startswith("Photon")]
-        background.getRDF().Snapshot(
+        background.rdf.Snapshot(
             "events", f"files/BDT/train/backgrounds/{name}.root", cols
         )
-
-    # Re-enable ImplicitMT if it was enabled
-    if was_enabled:
-        ROOT.EnableImplicitMT()
 
     s_files = [
         ROOT.TFile(f"files/BDT/train/signals/{name}.root") for name in signals.keys()

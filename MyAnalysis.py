@@ -1,8 +1,8 @@
 import ROOT
-from array import array
 from Samples import samp
 from rdfUtils import FilterCollection, definePtEtaPhiM
-import os
+
+ROOT.EnableImplicitMT()
 
 
 class MyAnalysis(object):
@@ -32,7 +32,7 @@ class MyAnalysis(object):
     def count(self):
         return self.rdf.Count().GetValue()
 
-    def defineBasicVariables(self):
+    def define_pt_eta_phi_m(self):
         # define MET pt
         self.rdf = self.rdf.Define("MET_pt", "sqrt(MET_px*MET_px + MET_py*MET_py)")
 
@@ -43,7 +43,7 @@ class MyAnalysis(object):
         return self.rdf
 
     def preprocessEvents(self):
-        self.rdf = self.defineBasicVariables()
+        self.rdf = self.define_pt_eta_phi_m()
 
         ### Muon selection - Select events with at least 1 isolated muon
         ### with pt>25 GeV to match trigger requirements
@@ -58,7 +58,7 @@ class MyAnalysis(object):
             "Muon",
             # new_col="IsoMu", # this rename the skimmed collection
             mask=f"Muon_pt > {muonPtCut} && Muon_relIso < {muonRelIsoCut}",
-        )  # .Filter("NMuon > 0") #to select events with at least 1 isolated muon
+        ).Filter("NMuon > 0")  # to select events with at least 1 isolated muon
 
     def processEvents(self):
         # Implement additional cuts
@@ -82,7 +82,6 @@ class MyAnalysis(object):
             "Muon_Iso", "Muon relative isolation", (25, 0.0, 3.0), "Muon_Iso"
         )
         self.defineHisto("NMuon", "# of isolated muons", (5, 0.5, 5.5), "NMuon")
-        # self.defineHisto("BDTscore", "BDT score", (25, -1.0, 1.0), "BDTscore")
 
     def saveHistos(self):
         # Trigger computation of all histograms in parallel using RunGraphs
@@ -99,39 +98,36 @@ class MyAnalysis(object):
         outfile.Close()
 
     def evaluateBDT(self, input_features):
-        os.makedirs("files/BDT/evaluate", exist_ok=True)
-        cols = self.rdf.GetColumnNames()
-        cols = [c for c in cols if "p4" not in c and not c.startswith("Photon")]
-        self.rdf.Snapshot("events", f"files/BDT/evaluate/{self.sample}.root", cols)
+        cpp_inputs = "{" + ", ".join([f'"{feat}"' for feat in input_features]) + "}"
 
-        file = ROOT.TFile(f"files/BDT/evaluate/{self.sample}.root")
-        tree = file.Get("events")
+        cpp_code = f"""
+            #ifndef BDT_DECLARED
+            #define BDT_DECLARED
+            TMVAEvaluator* bdt = new TMVAEvaluator("dataset/weights/BDTFactory_BDT.weights.xml", {cpp_inputs}, {{"BDT"}}, false);
+            #endif
+        """
 
-        var_names = ROOT.std.vector("TString")()
-        for feature in input_features:
-            var_names.push_back(ROOT.TString(feature))
-        reader = ROOT.TMVA.Reader("!Color:!Silent")
-        buffers = {}
+        ROOT.gInterpreter.Declare(cpp_code)
 
-        for feat in input_features:
-            buffers[feat] = array("f", [0.0])  # Reader needs 32-bit floats
-            reader.AddVariable(feat, buffers[feat])
+        def convertExpression(expr):
+            # Convert "Alt$(Jet_btag[1], -999)" to "Jet_btag.size()>1 ? Jet_btag[1] : -999"
+            if expr.startswith("Alt$"):
+                inner = expr[5:-1]  # Remove "Alt$(" and ")"
+                var, default = inner.split(",")
+                # remove whitespace
+                var = var.strip()
+                default = default.strip()
+                base_var = var.split("[")[0]
+                index = int(var.split("[")[1][:-1])
+                # Cast to float to avoid narrowing conversion errors
+                return (
+                    f"static_cast<float>({base_var}.size()>{index} ? {var} : {default})"
+                )
+            else:
+                return f"static_cast<float>({expr})"
 
-        reader.BookMVA("BDT", "dataset/weights/BDTFactory_BDT.weights.xml")
+        cols = [convertExpression(expr) for expr in input_features]
+        cols = "{" + ", ".join(cols) + "}"
 
-        formulas = {}
-        for feat in input_features:
-            formulas[feat] = ROOT.TTreeFormula(feat, feat, tree)
-        scores = ROOT.RVecF()
-        for entry in range(self.nEvents):
-            tree.GetEntry(entry)
-
-            for feat in input_features:
-                val = formulas[feat].EvalInstance()
-                buffers[feat][0] = val
-
-            out = reader.EvaluateMVA("BDT")
-            scores.push_back(out)
-
-        self.rdf = self.rdf.Define("BDTscore", "scores[rdfentry_]")
+        self.rdf = self.rdf.Define("BDTscore", f"bdt->run({cols})")
         self.defineHisto("BDTscore", "BDT score", (25, -1.0, 1.0), "BDTscore")
