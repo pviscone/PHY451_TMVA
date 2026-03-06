@@ -1,7 +1,8 @@
 import ROOT
 from array import array
 from Samples import samp
-import re
+from rdfUtils import FilterCollection, definePtEtaPhiM
+import os
 
 
 class MyAnalysis(object):
@@ -11,7 +12,6 @@ class MyAnalysis(object):
         and histograms are booked.
         """
 
-        self._tree = ROOT.TTree()
         if sample not in samp.keys() and sample != "data":
             print(
                 "Error"
@@ -20,115 +20,93 @@ class MyAnalysis(object):
         self.histograms = {}
         self.sample = sample
         self._file = ROOT.TFile("files/" + sample + ".root")
-        self._file.cd()
-        tree = self._file.Get("events")
-        self._tree = tree
+        self._tree = self._file.Get("events")
+        self.rdf = ROOT.RDataFrame(self._tree)
         self.nEvents = self._tree.GetEntries()
         print("Number of entries for " + self.sample + ": " + str(self.nEvents))
 
-        ### Book histograms
-        self.bookHistos()
-
-    def getTree(self):
-        return self._tree
-
-    def getHistos(self):
-        return self.histograms
-
-    def bookHistos(self):
-        h_nJet = ROOT.TH1F("NJet", "#of jets", 6, -0.5, 6.5)
-        h_nJet.SetXTitle("%# of jets")
-        self.histograms["NJet"] = h_nJet
-
-        h_nJetFinal = ROOT.TH1F("NJetFinal", "#of jets", 6, -0.5, 6.5)
-        h_nJetFinal.SetXTitle("%# of jets")
-        self.histograms["NJetFinal"] = h_nJetFinal
-
-        h_MuonIso = ROOT.TH1F("Muon_Iso", "Muon Isolation", 25, 0.0, 3.0)
-        h_MuonIso.SetXTitle("Muon Isolation")
-        self.histograms["Muon_Iso"] = h_MuonIso
-
-        h_NIsoMu = ROOT.TH1F("NIsoMu", "Number of isolated muons", 5, 0.5, 5.5)
-        h_NIsoMu.SetXTitle("Number of isolated muons")
-        self.histograms["NIsoMu"] = h_NIsoMu
-
-        h_MuonPt = ROOT.TH1F("Muon_Pt", "Muon P_T", 50, 0.0, 200.0)
-        h_MuonPt.SetXTitle("Muon P_T")
-        self.histograms["Muon_Pt"] = h_MuonPt
-
-        h_METpt = ROOT.TH1F("MET_Pt", "MET P_T", 25, 0.0, 300.0)
-        h_METpt.SetXTitle("MET P_T")
-        self.histograms["MET_Pt"] = h_METpt
-
-        h_JetPt = ROOT.TH1F("Jet_Pt", "Jet P_T", 50, 0.0, 200.0)
-        h_JetPt.SetXTitle("Jet P_T")
-        self.histograms["Jet_Pt"] = h_JetPt
-
-        h_JetBtag = ROOT.TH1F("Jet_Btag", "Jet B tag", 10, 1.0, 6.0)
-        h_JetBtag.SetXTitle("Jet B tag")
-        self.histograms["Jet_btag"] = h_JetBtag
-
-        h_NBtag = ROOT.TH1F("NBtag", "Jet B tag", 4, 0.5, 4.5)
-        h_NBtag.SetXTitle("Number of B tagged jets")
-        self.histograms["NBtag"] = h_NBtag
-
-        h_BDT = ROOT.TH1F("BDTscore", "BDT score", 25, -1.0, 1.0)
-        h_BDT.SetXTitle("BDT score")
-        self.histograms["BDTscore"] = h_BDT
-
-    def saveHistos(self):
-        outfilename = self.sample + "_histos.root"
-        outfile = ROOT.TFile(outfilename, "RECREATE")
-        outfile.cd()
-        for h in self.histograms.values():
-            h.Write()
-        outfile.Close()
-
-    ### processEvent function implements the actions to perform on each event
+    ### preprocessEvents/processEvents function implements the actions to perform on each event
+    ### preprocessEvents run before the training of the BDT, processEvents after the training.
     ### This is the place where to implement the analysis strategy: study of most sensitive variables
     ### and signal-like event selection
+    def count(self):
+        return self.rdf.Count().GetValue()
 
-    def preprocessEvent(self, entry):
-        tree = self.getTree()
-        tree.GetEntry(entry)
-        w = tree.EventWeight
+    def defineBasicVariables(self):
+        # define MET pt
+        self.rdf = self.rdf.Define("MET_pt", "sqrt(MET_px*MET_px + MET_py*MET_py)")
+
+        # Define 4-momentum and related variables
+        self.rdf = definePtEtaPhiM(self.rdf, "Muon")
+        self.rdf = definePtEtaPhiM(self.rdf, "Jet")
+        self.rdf = definePtEtaPhiM(self.rdf, "Electron")
+        return self.rdf
+
+    def preprocessEvents(self):
+        self.rdf = self.defineBasicVariables()
 
         ### Muon selection - Select events with at least 1 isolated muon
         ### with pt>25 GeV to match trigger requirements
         muonPtCut = 25.0
         muonRelIsoCut = 0.05
-        nIsoMu = 0
 
-        for m in range(tree.NMuon):
-            muon = ROOT.TLorentzVector(
-                tree.Muon_Px[m], tree.Muon_Py[m], tree.Muon_Pz[m], tree.Muon_E[m]
-            )
-            self.histograms["Muon_Iso"].Fill(tree.Muon_Iso[m], w)
-            if muon.Pt() > muonPtCut and (tree.Muon_Iso[m] / muon.Pt()) < muonRelIsoCut:
-                nIsoMu += 1
-                self.histograms["Muon_Pt"].Fill(muon.Pt(), w)
-        self.histograms["NIsoMu"].Fill(nIsoMu, w)
+        # skim the muon collection
+        self.rdf = self.rdf.Define("Muon_relIso", "Muon_Iso / Muon_pt")
 
-    ### processEvents run the function processEvent on each event stored in the tree
-    def preprocessEvents(self):
-        nevts = self.nEvents
-        for i in range(nevts):
-            self.preprocessEvent(i)
-
-    def processEvent(self, entry):
-        tree = self.getTree()
-        tree.GetEntry(entry)
-        w = tree.EventWeight
-
-        # Implement additional cuts
+        self.rdf = FilterCollection(
+            self.rdf,
+            "Muon",
+            # new_col="IsoMu", # this rename the skimmed collection
+            mask=f"Muon_pt > {muonPtCut} && Muon_relIso < {muonRelIsoCut}",
+        )  # .Filter("NMuon > 0") #to select events with at least 1 isolated muon
 
     def processEvents(self):
-        nevts = self.nEvents
-        for i in range(nevts):
-            self.processEvent(i)
+        # Implement additional cuts
+        self.runHistos()
         self.saveHistos()
 
+    def defineHisto(self, name, label, axis, branch, weight="EventWeight"):
+        # Store RResultPtr - computation is lazy
+        self.histograms[name] = {
+            "ptr": self.rdf.Histo1D((name, label, *axis), branch, weight),
+            "label": label,
+        }
+
+    def runHistos(self):
+        self.defineHisto("NJet", "# of jets", (6, -0.5, 6.5), "NJet")
+        self.defineHisto("Jet_Pt", "Jet pT", (50, 0.0, 200.0), "Jet_pt")
+        self.defineHisto("Jet_Btag", "Jet b-tag", (10, 1.0, 6.0), "Jet_btag")
+        self.defineHisto("MET_pt", "MET pT", (25, 0.0, 300.0), "MET_pt")
+        self.defineHisto("Muon_Pt", "Muon pT", (50, 0.0, 200.0), "Muon_pt")
+        self.defineHisto(
+            "Muon_Iso", "Muon relative isolation", (25, 0.0, 3.0), "Muon_Iso"
+        )
+        self.defineHisto("NMuon", "# of isolated muons", (5, 0.5, 5.5), "NMuon")
+        # self.defineHisto("BDTscore", "BDT score", (25, -1.0, 1.0), "BDTscore")
+
+    def saveHistos(self):
+        # Trigger computation of all histograms in parallel using RunGraphs
+        result_ptrs = [h["ptr"] for h in self.histograms.values()]
+        ROOT.RDF.RunGraphs(result_ptrs)
+
+        outfilename = self.sample + "_histos.root"
+        outfile = ROOT.TFile(outfilename, "RECREATE")
+        outfile.cd()
+        for name, h_dict in self.histograms.items():
+            h = h_dict["ptr"].GetValue()
+            h.SetXTitle(h_dict["label"])
+            h.Write()
+        outfile.Close()
+
     def evaluateBDT(self, input_features):
+        os.makedirs("files/BDT/evaluate", exist_ok=True)
+        cols = self.rdf.GetColumnNames()
+        cols = [c for c in cols if "p4" not in c and not c.startswith("Photon")]
+        self.rdf.Snapshot("events", f"files/BDT/evaluate/{self.sample}.root", cols)
+
+        file = ROOT.TFile(f"files/BDT/evaluate/{self.sample}.root")
+        tree = file.Get("events")
+
         var_names = ROOT.std.vector("TString")()
         for feature in input_features:
             var_names.push_back(ROOT.TString(feature))
@@ -141,16 +119,10 @@ class MyAnalysis(object):
 
         reader.BookMVA("BDT", "dataset/weights/BDTFactory_BDT.weights.xml")
 
-        tree = self.getTree()
-        self.friend_tree = ROOT.TTree("additional", "Friend tree with BDT scores")
-
-        bdt_output = array("f", [0.0])
-        bdt_branch = self.friend_tree.Branch("BDT_output", bdt_output, "BDT_output/F")
-
-        w = tree.EventWeight
         formulas = {}
         for feat in input_features:
             formulas[feat] = ROOT.TTreeFormula(feat, feat, tree)
+        scores = ROOT.RVecF()
         for entry in range(self.nEvents):
             tree.GetEntry(entry)
 
@@ -159,8 +131,7 @@ class MyAnalysis(object):
                 buffers[feat][0] = val
 
             out = reader.EvaluateMVA("BDT")
-            bdt_output[0] = out
-            self.histograms["BDTscore"].Fill(out, w)
-            bdt_branch.Fill()
+            scores.push_back(out)
 
-        tree.AddFriend(self.friend_tree)
+        self.rdf = self.rdf.Define("BDTscore", "scores[rdfentry_]")
+        self.defineHisto("BDTscore", "BDT score", (25, -1.0, 1.0), "BDTscore")

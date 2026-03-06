@@ -76,14 +76,14 @@ samples = {**signals, **backgrounds}
 
 Data = MyAnalysis("data")
 Data.preprocessEvents()
-Data.evaluateBDT(input_features)
+# Data.evaluateBDT(input_features)
 Data.processEvents()
 
 for sample in samples.values():
-    sample.evaluateBDT(input_features)
+    # sample.evaluateBDT(input_features)
     sample.processEvents()
 
-vars = ["NIsoMu", "Muon_Pt", "BDTscore"]
+vars = ["NMuon", "Muon_Pt", "BDTscore"]
 for v in vars:
     print("Variable: ", v)
     plotShapes(v, list(samples.keys()), True)

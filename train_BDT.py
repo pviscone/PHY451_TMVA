@@ -1,11 +1,59 @@
 import ROOT
-import numpy as np
-from sklearn.metrics import roc_curve, auc
+import os
 
 
 def train_BDT(
     signals, backgrounds, input_features, max_depth=8, nTrees=50, train_frac=0.2
 ):
+    """
+    Train BDT using TMVA with RDataFrame objects.
+    Works with EnableImplicitMT for parallel processing.
+
+    Parameters:
+    - signals: dict of MyAnalysis objects for signal samples
+    - backgrounds: dict of MyAnalysis objects for background samples
+    - input_features: list of feature names/expressions to use for training
+    - max_depth: maximum depth of decision trees
+    - nTrees: number of trees in the BDT
+    - train_frac: fraction of events to use for training
+    """
+
+    # Disable ImplicitMT temporarily for Snapshot to avoid issues
+    was_enabled = ROOT.IsImplicitMTEnabled()
+    if was_enabled:
+        ROOT.DisableImplicitMT()
+
+    os.makedirs("files/BDT/train/signals", exist_ok=True)
+    os.makedirs("files/BDT/train/backgrounds", exist_ok=True)
+
+    # Snapshot RDataFrames to TTrees for TMVA
+    for name, signal in signals.items():
+        cols = signal.getRDF().GetColumnNames()
+        cols = [c for c in cols if "p4" not in c and not c.startswith("Photon")]
+        signal.getRDF().Snapshot("events", f"files/BDT/train/signals/{name}.root", cols)
+
+    for name, background in backgrounds.items():
+        cols = background.getRDF().GetColumnNames()
+        cols = [c for c in cols if "p4" not in c and not c.startswith("Photon")]
+        background.getRDF().Snapshot(
+            "events", f"files/BDT/train/backgrounds/{name}.root", cols
+        )
+
+    # Re-enable ImplicitMT if it was enabled
+    if was_enabled:
+        ROOT.EnableImplicitMT()
+
+    s_files = [
+        ROOT.TFile(f"files/BDT/train/signals/{name}.root") for name in signals.keys()
+    ]
+    b_files = [
+        ROOT.TFile(f"files/BDT/train/backgrounds/{name}.root")
+        for name in backgrounds.keys()
+    ]
+
+    s_trees = [f.Get("events") for f in s_files]
+    b_trees = [f.Get("events") for f in b_files]
+
     outfile = ROOT.TFile("TMVA_BDT_training.root", "RECREATE")
 
     factory = ROOT.TMVA.Factory(
@@ -18,17 +66,15 @@ def train_BDT(
     for var in input_features:
         dataloader.AddVariable(var, "F")
 
-    for _, signal_obj in signals.items():
-        tree = signal_obj.getTree()
-        dataloader.AddSignalTree(tree, 1.0)
+    for s in s_trees:
+        dataloader.AddSignalTree(s, 1.0)
 
-    for _, bg_obj in backgrounds.items():
-        tree = bg_obj.getTree()
+    for b in b_trees:
         # fair reweighting (instead of xsec based)
-        dataloader.AddBackgroundTree(tree, 1.0 / len(backgrounds))
+        dataloader.AddBackgroundTree(b, 1.0 / len(backgrounds))
 
-    nSigEvents = sum([signal_obj.nEvents for signal_obj in signals.values()])
-    nBkgEvents = sum([bg_obj.nEvents for bg_obj in backgrounds.values()])
+    nSigEvents = sum([signal_obj.count() for signal_obj in signals.values()])
+    nBkgEvents = sum([bg_obj.count() for bg_obj in backgrounds.values()])
 
     dataloader.PrepareTrainingAndTestTree(
         ROOT.TCut(""),
