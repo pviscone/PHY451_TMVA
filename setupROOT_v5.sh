@@ -2,7 +2,7 @@
 #cd /app/cern/root_v5.34.34/ 
 #cd /app/cern/root_v5.34.38/ 
 #cd /app/cern/root_v6.14.00/ 
-cd /app/cern/root_v6.18.04/ 
+cd /app/cern/root_v6.32.10/ 
 #
 
 source bin/thisroot.sh
