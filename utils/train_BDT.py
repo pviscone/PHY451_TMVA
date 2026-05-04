@@ -90,6 +90,45 @@ def plot_score_distribution():
         if integral > 0:
             h.Scale(1.0 / integral)
 
+    def _make_roc_graph(h_sig, h_bkg, name):
+        n_bins = h_sig.GetNbinsX()
+        sig_total = h_sig.Integral(0, n_bins + 1)
+        bkg_total = h_bkg.Integral(0, n_bins + 1)
+
+        graph = ROOT.TGraph()
+        points = []
+
+        graph.SetPoint(0, 0.0, 0.0)
+        points.append((0.0, 0.0))
+
+        for bin_idx in range(n_bins, 0, -1):
+            sig_eff = (
+                0.0
+                if sig_total == 0.0
+                else h_sig.Integral(bin_idx, n_bins + 1) / sig_total
+            )
+            bkg_eff = (
+                0.0
+                if bkg_total == 0.0
+                else h_bkg.Integral(bin_idx, n_bins + 1) / bkg_total
+            )
+            x = bkg_eff
+            y = sig_eff
+            graph.SetPoint(len(points), x, y)
+            points.append((x, y))
+
+        graph.SetPoint(len(points), 1.0, 1.0)
+        points.append((1.0, 1.0))
+        graph.SetName(name)
+
+        auc = 0.0
+        for idx in range(1, len(points)):
+            x0, y0 = points[idx - 1]
+            x1, y1 = points[idx]
+            auc += 0.5 * (y0 + y1) * (x1 - x0)
+        auc = max(0.0, min(1.0, auc))
+        return graph, auc
+
     h_test_sig = _get_hist("dataset/Method_BDT/BDT/MVA_BDT_S")
     h_train_sig = _get_hist("dataset/Method_BDT/BDT/MVA_BDT_Train_S")
     h_test_bkg = _get_hist("dataset/Method_BDT/BDT/MVA_BDT_B")
@@ -140,3 +179,35 @@ def plot_score_distribution():
     leg.AddEntry(h_train_bkg, "Train bkg", "lep")
     leg.Draw()
     c.SaveAs(os.path.join("results", "BDT_score.pdf"))
+
+    g_test_roc, auc_test = _make_roc_graph(h_test_sig, h_test_bkg, "g_test_roc")
+    g_train_roc, auc_train = _make_roc_graph(h_train_sig, h_train_bkg, "g_train_roc")
+
+    g_test_roc.SetLineColor(ROOT.kRed + 1)
+    g_test_roc.SetLineWidth(2)
+    g_train_roc.SetLineColor(ROOT.kBlue + 1)
+    g_train_roc.SetLineWidth(2)
+
+    c_roc = ROOT.TCanvas("c_roc", "ROC curves", 800, 600)
+    frame = ROOT.TH1F(
+        "frame_roc", ";Background efficiency;Signal efficiency", 100, 0.0, 1.0
+    )
+    frame.SetMinimum(0.0)
+    frame.SetMaximum(1.05)
+    frame.Draw()
+
+    diagonal = ROOT.TLine(0.0, 0.0, 1.0, 1.0)
+    diagonal.SetLineStyle(2)
+    diagonal.SetLineColor(ROOT.kGray + 1)
+    diagonal.Draw("same")
+
+    g_test_roc.Draw("L SAME")
+    g_train_roc.Draw("L SAME")
+
+    leg_roc = ROOT.TLegend(0.18, 0.18, 0.46, 0.32)
+    leg_roc.SetBorderSize(0)
+    leg_roc.AddEntry(g_test_roc, f"Test sample (AUC={auc_test:.3f})", "l")
+    leg_roc.AddEntry(g_train_roc, f"Train sample (AUC={auc_train:.3f})", "l")
+    leg_roc.Draw()
+
+    c_roc.SaveAs(os.path.join("results", "BDT_ROC.pdf"))
