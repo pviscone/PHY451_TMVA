@@ -1,4 +1,4 @@
-from MyAnalysis import MyAnalysis
+from MyAnalysis import MyAnalysis, to_plot
 from utils.Plotter import plotVar, plotShapes
 from utils.train_BDT import train_BDT, plot_score_distribution
 import os
@@ -9,7 +9,6 @@ signals = {}
 backgrounds = {}
 
 input_features = [
-    # "NJet",
     "Alt$(Jet_pt[0], -999)",
     "Alt$(Jet_pt[1], -999)",
     "Alt$(Jet_pt[2], -999)",
@@ -30,17 +29,18 @@ input_features = [
     "Alt$(Jet_ID[1], -999)",
     "Alt$(Jet_ID[2], -999)",
     "Alt$(Jet_ID[3], -999)",
-    "NMuon",
     "Alt$(Muon_pt[0], -999)",
-    "Alt$(Muon_pt[1], -999)",
     "Alt$(Muon_eta[0], -999)",
-    "Alt$(Muon_eta[1], -999)",
     "Alt$(Muon_phi[0], -999)",
-    "Alt$(Muon_phi[1], -999)",
-    "Alt$(Muon_Charge[0], -999)",
-    "Alt$(Muon_Charge[1], -999)",
     "Alt$(Muon_Iso[0], -999)",
-    "Alt$(Muon_Iso[1], -999)",
+    # "NJet",
+    # "NMuon",
+    # "Alt$(Muon_Charge[0], -999)",
+    # "Alt$(Muon_phi[1], -999)",
+    # "Alt$(Muon_pt[1], -999)",
+    # "Alt$(Muon_eta[1], -999)"
+    # "Alt$(Muon_Charge[1], -999)",
+    # "Alt$(Muon_Iso[1], -999)",
     # "NElectron",
     # "Alt$(Electron_pt[0], -999)",
     # "Alt$(Electron_pt[1], -999)",
@@ -52,7 +52,7 @@ input_features = [
     # "Alt$(Electron_Charge[1], -999)",
     # "Alt$(Electron_Iso[0], -999)",
     # "Alt$(Electron_Iso[1], -999)",
-    "MET_pt",
+    # "MET_pt",
 ]
 
 for signal in ["ttbar"]:
@@ -77,8 +77,7 @@ for sample in samples.values():
     sample.evaluateBDT(input_features)
     sample.processEvents()
 
-vars = ["NMuon", "Muon_Pt", "BDTscore"]
-for v in vars:
+for v in to_plot:
     print("Variable: ", v)
     plotShapes(v, list(samples.keys()), True)
     plotVar(v, list(samples.keys()), True, True)

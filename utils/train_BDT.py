@@ -49,14 +49,21 @@ def train_BDT(
 
     for b in b_trees:
         # fair reweighting (instead of xsec based)
-        dataloader.AddBackgroundTree(b, 1.0 / len(backgrounds))
+        if b.GetEntries() > 0:
+            dataloader.AddBackgroundTree(b, 1.0)
+        else:
+            print(
+                f"Warning: Background tree {b.GetName()} has no entries and will be skipped."
+            )
+    dataloader.SetSignalWeightExpression("EventWeight")
+    dataloader.SetBackgroundWeightExpression("EventWeight")
 
     nSigEvents = sum([signal_obj.count() for signal_obj in signals.values()])
     nBkgEvents = sum([bg_obj.count() for bg_obj in backgrounds.values()])
 
     dataloader.PrepareTrainingAndTestTree(
         ROOT.TCut(""),
-        f"nTrain_Signal={int(nSigEvents * train_frac)}:nTrain_Background={int(nBkgEvents * train_frac)}:nTest_Signal={int(nSigEvents * (1 - train_frac))}:nTest_Background={int(nBkgEvents * (1 - train_frac))}:SplitMode=Random:!V",
+        f"NormMode=EqualNumEvents:nTrain_Signal={int(nSigEvents * train_frac)}:nTrain_Background={int(nBkgEvents * train_frac)}:nTest_Signal={int(nSigEvents * (1 - train_frac))}:nTest_Background={int(nBkgEvents * (1 - train_frac))}:SplitMode=Random:!V",
     )
 
     factory.BookMethod(

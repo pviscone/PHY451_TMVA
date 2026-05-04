@@ -162,6 +162,23 @@ ROOT::RVec<float> TMVAEvaluator::run(ROOT::RVec<float> in) {
 """
 ROOT.gInterpreter.Declare(cpp_code)
 
+def DefineFromIndex(rdf, collection, new_col, index):
+    vars = rdf.GetColumnNames()
+    vars = [name for name in vars if name.startswith(collection + "_")]
+    for var in vars:
+        rdf = rdf.Define(f"{new_col}_{var.split('_', 1)[1]}", f"{var}[{index}]")
+    return rdf
+
+def SortCollection(rdf, collection, new_col=None, sort_by=None, order="descending"):
+    if order == "descending":
+        indices = f"ROOT::VecOps::Reverse(ROOT::VecOps::Argsort({sort_by}))"
+    elif order == "ascending":
+        indices = f"ROOT::VecOps::Argsort({sort_by})"
+    else:
+        raise ValueError("Order must be 'ascending' or 'descending'")
+
+    return FilterCollection(rdf, collection, new_col, indices=indices)
+
 
 def FilterCollection(rdf, collection, new_col=None, mask=None, indices=None):
     if mask is None:

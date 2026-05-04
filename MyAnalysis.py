@@ -1,12 +1,21 @@
 import ROOT
 from utils.Samples import samp
-from utils.rdfUtils import FilterCollection, definePtEtaPhiM
+from utils.rdfUtils import (
+    FilterCollection,
+    SortCollection,
+    DefineFromIndex,
+    definePtEtaPhiM,
+)
 import os
 
 ROOT.EnableImplicitMT()
 
+to_plot = set()
+
 
 class MyAnalysis(object):
+    _hist_files_created = set()  # Track which histogram files have been created
+
     def __init__(self, sample):
         """The Init() function is called when an object MyAnalysis is initialised
         The tree corresponding to the specific sample is picked up
@@ -45,8 +54,23 @@ class MyAnalysis(object):
 
     def preprocessEvents(self):
         self.rdf = self.define_pt_eta_phi_m()
+        #! ============== Trigger selection ==============
+        self.rdf = self.rdf.Filter("triggerIsoMu24")
 
-        ### Muon selection - Select events with at least 1 isolated muon
+        #! ================ Jet selection ================
+        jetPtCut = 15
+        njetCut = 2
+
+        self.rdf = FilterCollection(
+            self.rdf,
+            "Jet",
+            mask=f"Jet_ID == 1 && Jet_pt > {jetPtCut}",
+        ).Filter(f"NJet >= {njetCut}")
+        # reorder jets by pt
+        self.rdf = SortCollection(self.rdf, "Jet", sort_by="Jet_pt")
+
+        #! ================ Muon selection ================
+        ###  - Select events with at least 1 isolated muon
         ### with pt>25 GeV to match trigger requirements
         muonPtCut = 25.0
         muonRelIsoCut = 0.05
@@ -60,29 +84,42 @@ class MyAnalysis(object):
             # new_col="IsoMu", # this rename the skimmed collection
             mask=f"Muon_pt > {muonPtCut} && Muon_relIso < {muonRelIsoCut}",
         ).Filter("NMuon > 0")  # to select events with at least 1 isolated muon
+        # reorder muons by pt
+        self.rdf = SortCollection(self.rdf, "Muon", sort_by="Muon_pt")
+        # select muon with highest pt (leading muon)
+        self.rdf = DefineFromIndex(
+            self.rdf,
+            "Muon",
+            new_col="LeadingMuon",
+            index="ROOT::VecOps::ArgMax(Muon_pt)",
+        )
+
+        #! ============= Observables definition ============
 
     def processEvents(self):
         # Implement additional cuts
         self.runHistos()
         self.saveHistos()
 
-    def defineHisto(self, name, label, axis, branch, weight="EventWeight"):
+    def defineHisto(self, branch, label, axis, weight="EventWeight"):
+        to_plot.add(branch)
         # Store RResultPtr - computation is lazy
-        self.histograms[name] = {
-            "ptr": self.rdf.Histo1D((name, label, *axis), branch, weight),
+        self.histograms[branch] = {
+            "ptr": self.rdf.Histo1D((branch, label, *axis), branch, weight),
             "label": label,
         }
 
     def runHistos(self):
-        self.defineHisto("NJet", "# of jets", (6, -0.5, 6.5), "NJet")
-        self.defineHisto("Jet_Pt", "Jet pT", (50, 0.0, 200.0), "Jet_pt")
-        self.defineHisto("Jet_Btag", "Jet b-tag", (10, 1.0, 6.0), "Jet_btag")
-        self.defineHisto("MET_pt", "MET pT", (25, 0.0, 300.0), "MET_pt")
-        self.defineHisto("Muon_Pt", "Muon pT", (50, 0.0, 200.0), "Muon_pt")
+        self.defineHisto("NJet", "# of jets", (6, -0.5, 6.5))
+        self.defineHisto("Jet_pt", "Jet pT", (50, 0.0, 200.0))
+        self.defineHisto("Jet_btag", "Jet b-tag", (10, 1.0, 6.0))
+        self.defineHisto("MET_pt", "MET pT", (25, 0.0, 300.0))
+        self.defineHisto("LeadingMuon_pt", "Leading Muon pT", (50, 0.0, 200.0))
         self.defineHisto(
-            "Muon_Iso", "Muon relative isolation", (25, 0.0, 3.0), "Muon_Iso"
+            "LeadingMuon_relIso", "Leading Muon relative isolation", (25, 0.0, 0.3)
         )
-        self.defineHisto("NMuon", "# of isolated muons", (5, 0.5, 5.5), "NMuon")
+        self.defineHisto("NMuon", "# of isolated muons", (5, 0.5, 5.5))
+        self.defineHisto("BDTscore", "BDT score", (25, -1.0, 1.0))
 
     def saveHistos(self):
         # Trigger computation of all histograms in parallel using RunGraphs
@@ -92,7 +129,15 @@ class MyAnalysis(object):
         for name, h_dict in self.histograms.items():
             h = h_dict["ptr"].GetValue()
             outfilename = name + "_histos.root"
-            outfile = ROOT.TFile(os.path.join("results", outfilename), "UPDATE")
+            outpath = os.path.join("results", outfilename)
+            # Use RECREATE on first write to file, UPDATE on subsequent writes
+            mode = (
+                "RECREATE"
+                if outpath not in MyAnalysis._hist_files_created
+                else "UPDATE"
+            )
+            MyAnalysis._hist_files_created.add(outpath)
+            outfile = ROOT.TFile(outpath, mode)
             outfile.cd()
             h.SetName(self.sample)
             h.SetXTitle(h_dict["label"])
@@ -132,4 +177,3 @@ class MyAnalysis(object):
         cols = "{" + ", ".join(cols) + "}"
 
         self.rdf = self.rdf.Define("BDTscore", f"bdt->run({cols})")
-        self.defineHisto("BDTscore", "BDT score", (25, -1.0, 1.0), "BDTscore")
