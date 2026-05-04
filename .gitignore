@@ -5,3 +5,4 @@
 *.C
 *.xml
 Combine
+combine_logger*
