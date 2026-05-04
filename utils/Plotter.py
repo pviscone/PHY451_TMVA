@@ -77,13 +77,17 @@ def setStyleStack(hs, options=""):
 def setStyleLegend(leg):
     leg.SetNColumns(3)
     leg.SetFillColor(0)
-    leg.SetTextSize(0.045)
+    leg.SetTextSize(0.015)
     leg.SetTextFont(42)
+
+
+leg_pos = (0.8, 0.75, 1.0, 1.0)
 
 
 def getStack(var, samples, excludeSig=False):
     hs = ROOT.THStack(var, "")
-    leg = ROOT.TLegend(0.47, 0.65, 0.89, 0.89)
+    # place legend in upper-right corner
+    leg = ROOT.TLegend(*leg_pos)
     setStyleLegend(leg)
 
     for s in samples:
@@ -162,7 +166,8 @@ def plotVarNorm(var, samples, logScale=False):
     if logScale:
         c.SetLogy()
 
-    leg = ROOT.TLegend(0.47, 0.65, 0.89, 0.89)
+    # upper-right corner
+    leg = ROOT.TLegend(*leg_pos)
     setStyleLegend(leg)
 
     for s in samples:
@@ -195,7 +200,8 @@ def plotShapes(var, samples, logScale=False):
     if logScale:
         c.SetLogy()
     hs = getStack(var, samples, True)[0]
-    leg = ROOT.TLegend(0.47, 0.65, 0.89, 0.89)
+    # upper-right corner
+    leg = ROOT.TLegend(*leg_pos)
     setStyleLegend(leg)
 
     h_bkg = hs.GetStack().Last()
