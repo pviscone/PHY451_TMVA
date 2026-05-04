@@ -1,6 +1,9 @@
 from MyAnalysis import MyAnalysis
-from Plotter import plotVar, plotShapes
-from train_BDT import train_BDT, plot_score_distribution
+from utils.Plotter import plotVar, plotShapes
+from utils.train_BDT import train_BDT, plot_score_distribution
+import os
+
+os.makedirs("results", exist_ok=True)
 
 signals = {}
 backgrounds = {}

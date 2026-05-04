@@ -1,6 +1,6 @@
 import ROOT
 import os.path
-from Samples import samp
+from utils.Samples import samp
 
 # ROOT.gROOT.Reset()
 ROOT.gROOT.SetStyle("Plain")
@@ -72,7 +72,7 @@ def getStack(var, samples, excludeSig=False):
     setStyleLegend(leg)
 
     for s in samples:
-        if not os.path.exists(s + "_histos.root"):
+        if not os.path.exists(os.path.join("results", s + "_histos.root")):
             print(
                 "File "
                 + s
@@ -82,7 +82,7 @@ def getStack(var, samples, excludeSig=False):
         else:
             if excludeSig and s == "ttbar":
                 continue
-            f = ROOT.TFile(s + "_histos.root")
+            f = ROOT.TFile(os.path.join("results", s + "_histos.root"))
             h = f.Get(var)
             setStyle(h, samp[s], 1, 1001)
             hs.Add(h, "HIST")
@@ -99,12 +99,12 @@ def plotVar(var, samples, isData=False, logScale=False):
     leg = getStack(var, samples)[1]
     hs.Draw()
     ### Superimposing signal events (ttbar) to visualise its shape
-    if not os.path.exists("ttbar_histos.root"):
+    if not os.path.exists(os.path.join("results", "ttbar_histos.root")):
         print(
             "File ttbar_histos.root does not exist. Please, check to have processed the corresponding sample"
         )
     else:
-        f = ROOT.TFile("ttbar_histos.root")
+        f = ROOT.TFile(os.path.join("results", "ttbar_histos.root"))
         h = f.Get(var)
         setStyle(h, samp["ttbar"], 0, 0)
         h.SetLineColor(samp["ttbar"])
@@ -113,12 +113,12 @@ def plotVar(var, samples, isData=False, logScale=False):
         leg.AddEntry(h, "ttbar", "L")
 
     if isData:
-        if not os.path.exists("data_histos.root"):
+        if not os.path.exists(os.path.join("results", "data_histos.root")):
             print(
                 "File data_histos.root does not exist. Please, check to have processed the corresponding sample"
             )
         else:
-            f = ROOT.TFile("data_histos.root")
+            f = ROOT.TFile(os.path.join("results", "data_histos.root"))
             h = f.Get(var)
             setStyle(h, ROOT.kBlack, 0, 0)
             h.Draw("same")
@@ -128,9 +128,9 @@ def plotVar(var, samples, isData=False, logScale=False):
     leg.Draw("SAME")
     if isData:
         hs.SetMaximum(ymax * 1.3)
-        c.SaveAs(var + ".pdf")
+        c.SaveAs(os.path.join("results", var + ".pdf"))
     else:
-        c.SaveAs(var + "_MC.pdf")
+        c.SaveAs(os.path.join("results", var + "_MC.pdf"))
 
 
 def plotVarNorm(var, samples, logScale=False):
@@ -143,7 +143,7 @@ def plotVarNorm(var, samples, logScale=False):
     setStyleLegend(leg)
 
     for s in samples:
-        if not os.path.exists(s + "_histos.root"):
+        if not os.path.exists(os.path.join("results", s + "_histos.root")):
             print(
                 "File "
                 + s
@@ -151,7 +151,7 @@ def plotVarNorm(var, samples, logScale=False):
             )
             continue
         else:
-            f = ROOT.TFile(s + "_histos.root")
+            f = ROOT.TFile(os.path.join("results", s + "_histos.root"))
             h = f.Get(var)
             setStyle(h, samp[s], 0, 0)
             h.SetLineColor(samp[s])
@@ -162,7 +162,7 @@ def plotVarNorm(var, samples, logScale=False):
             leg.AddEntry(h, s, "l")
 
     leg.Draw("SAME")
-    c.SaveAs(var + "_Norm_MC.pdf")
+    c.SaveAs(os.path.join("results", var + "_Norm_MC.pdf"))
 
 
 def plotShapes(var, samples, logScale=False):
@@ -182,13 +182,13 @@ def plotShapes(var, samples, logScale=False):
     h_bkg.Draw("hist")
     leg.AddEntry(h_bkg, "Background", "l")
 
-    if not os.path.exists("ttbar_histos.root"):
+    if not os.path.exists(os.path.join("results", "ttbar_histos.root")):
         print(
             "File ttbar_histos.root does not exist. Please, check to have processed the corresponding sample"
         )
 
     else:
-        f = ROOT.TFile("ttbar_histos.root")
+        f = ROOT.TFile(os.path.join("results", "ttbar_histos.root"))
         h = f.Get(var)
         setStyle(h, samp["ttbar"], 0, 0)
         h.SetLineColor(ROOT.kPink - 8)
@@ -199,7 +199,7 @@ def plotShapes(var, samples, logScale=False):
         leg.AddEntry(h, "Signal (ttbar)", "L")
 
     leg.Draw("SAME")
-    c.SaveAs(var + "_Shape_MC.pdf")
+    c.SaveAs(os.path.join("results", var + "_Shape_MC.pdf"))
 
 
 def getBkgHisto(var, samples):
@@ -217,7 +217,7 @@ def getBkgHisto(var, samples):
 def getHisto(var, sample):
     h = ROOT.TH1F()
     filename = sample + "_histos.root"
-    if not os.path.exists(filename):
+    if not os.path.exists(os.path.join("results", filename)):
         print(
             "File "
             + filename
@@ -225,7 +225,7 @@ def getHisto(var, sample):
         )
 
     else:
-        f = ROOT.TFile(filename)
+        f = ROOT.TFile(os.path.join("results", filename))
         h = f.Get(var)
         if sample == "data":
             setStyle(h, ROOT.kBlack, 0, 0)

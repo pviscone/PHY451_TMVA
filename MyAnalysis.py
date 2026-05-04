@@ -1,6 +1,7 @@
 import ROOT
-from Samples import samp
-from rdfUtils import FilterCollection, definePtEtaPhiM
+from utils.Samples import samp
+from utils.rdfUtils import FilterCollection, definePtEtaPhiM
+import os
 
 ROOT.EnableImplicitMT()
 
@@ -89,7 +90,7 @@ class MyAnalysis(object):
         ROOT.RDF.RunGraphs(result_ptrs)
 
         outfilename = self.sample + "_histos.root"
-        outfile = ROOT.TFile(outfilename, "RECREATE")
+        outfile = ROOT.TFile(os.path.join("results", outfilename), "RECREATE")
         outfile.cd()
         for name, h_dict in self.histograms.items():
             h = h_dict["ptr"].GetValue()

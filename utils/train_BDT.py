@@ -32,7 +32,7 @@ def train_BDT(
     s_trees = [f.Get("events") for f in s_files]
     b_trees = [f.Get("events") for f in b_files]
 
-    outfile = ROOT.TFile("TMVA_BDT_training.root", "RECREATE")
+    outfile = ROOT.TFile(os.path.join("results", "TMVA_BDT_training.root"), "RECREATE")
 
     factory = ROOT.TMVA.Factory(
         "BDTFactory",
@@ -75,7 +75,7 @@ def train_BDT(
 
 
 def plot_score_distribution():
-    outfile = ROOT.TFile("TMVA_BDT_training.root", "READ")
+    outfile = ROOT.TFile(os.path.join("results", "TMVA_BDT_training.root"), "READ")
 
     def _get_hist(path):
         h = outfile.Get(path)
@@ -139,4 +139,4 @@ def plot_score_distribution():
     leg.AddEntry(h_test_bkg, "Test bkg", "f")
     leg.AddEntry(h_train_bkg, "Train bkg", "lep")
     leg.Draw()
-    c.SaveAs("BDT_score.pdf")
+    c.SaveAs(os.path.join("results", "BDT_score.pdf"))
