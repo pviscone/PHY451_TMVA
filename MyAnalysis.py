@@ -58,7 +58,7 @@ class MyAnalysis(object):
         self.rdf = self.rdf.Filter("triggerIsoMu24")
 
         #! ================ Jet selection ================
-        jetPtCut = 15
+        jetPtCut = 45
         njetCut = 2
 
         self.rdf = FilterCollection(
@@ -88,7 +88,7 @@ class MyAnalysis(object):
             self.rdf,
             "Muon",
             # new_col="IsoMu", # this rename the skimmed collection
-            mask=f"Muon_pt > {muonPtCut} && Muon_relIso < {muonRelIsoCut}",
+            mask=f"Muon_pt > {muonPtCut} && Muon_relIso < {muonRelIsoCut}",  # removed transition region
         ).Filter("NMuon > 0")  # to select events with at least 1 isolated muon
         # reorder muons by pt
         self.rdf = SortCollection(self.rdf, "Muon", sort_by="Muon_pt")
@@ -98,7 +98,8 @@ class MyAnalysis(object):
             "Muon",
             new_col="LeadingMuon",
             index="ROOT::VecOps::ArgMax(Muon_pt)",
-        )
+        ).Filter("abs(LeadingMuon_eta) < 1.479 || abs(LeadingMuon_eta) > 1.566")
+        # remove events with leading muon in the transition region between barrel and endcap
 
         #! ============= Observables definition ============
         self.rdf = self.rdf.Define(

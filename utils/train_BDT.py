@@ -44,8 +44,11 @@ def train_BDT(
     for var in input_features:
         dataloader.AddVariable(var, "F")
 
+    nSigEvents = sum([signal_obj.count() for signal_obj in signals.values()])
+    nBkgEvents = sum([bg_obj.count() for bg_obj in backgrounds.values()])
+
     for s in s_trees:
-        dataloader.AddSignalTree(s, 1.0)
+        dataloader.AddSignalTree(s, nBkgEvents / nSigEvents)
 
     for b in b_trees:
         # fair reweighting (instead of xsec based)
@@ -58,10 +61,8 @@ def train_BDT(
     dataloader.SetSignalWeightExpression("EventWeight")
     dataloader.SetBackgroundWeightExpression("EventWeight")
 
-    nSigEvents = sum([signal_obj.count() for signal_obj in signals.values()])
-    nBkgEvents = sum([bg_obj.count() for bg_obj in backgrounds.values()])
-
     dataloader.PrepareTrainingAndTestTree(
+        ROOT.TCut(""),
         ROOT.TCut(""),
         f"NormMode=EqualNumEvents:nTrain_Signal={int(nSigEvents * train_frac)}:nTrain_Background={int(nBkgEvents * train_frac)}:nTest_Signal={int(nSigEvents * (1 - train_frac))}:nTest_Background={int(nBkgEvents * (1 - train_frac))}:SplitMode=Random:!V",
     )
@@ -70,7 +71,7 @@ def train_BDT(
         dataloader,
         ROOT.TMVA.Types.kBDT,
         "BDT",
-        f"!H:!V:NTrees={nTrees}:MinNodeSize=2.5%:MaxDepth={max_depth}:BoostType=AdaBoost:SeparationType=GiniIndex",
+        f"!H:!V:NTrees={nTrees}:MinNodeSize=2.5%:MaxDepth={max_depth}:BoostType=Grad:Shrinkage=0.10:UseBaggedBoost:BaggedSampleFraction=0.5",
     )
 
     factory.TrainAllMethods()
