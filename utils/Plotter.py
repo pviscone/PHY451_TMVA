@@ -11,6 +11,21 @@ ROOT.TH1.SetDefaultSumw2()
 ROOT.TH1.AddDirectory(False)
 
 
+def _hist_file_path(var):
+    return os.path.join("results", var + "_histos.root")
+
+
+def _load_histogram(var, sample):
+    f = ROOT.TFile(_hist_file_path(var))
+    h = f.Get(sample)
+    if not h:
+        return None
+    clone = h.Clone(f"{sample}_{var}_clone")
+    clone.SetDirectory(0)
+    ROOT.SetOwnership(clone, False)
+    return clone
+
+
 def setStyle(histo, color, style=0, fill=0):
     histo.GetXaxis().SetLabelFont(42)
     histo.GetYaxis().SetLabelFont(42)
@@ -72,18 +87,19 @@ def getStack(var, samples, excludeSig=False):
     setStyleLegend(leg)
 
     for s in samples:
-        if not os.path.exists(os.path.join("results", s + "_histos.root")):
+        if not os.path.exists(_hist_file_path(var)):
             print(
                 "File "
-                + s
-                + "_histos.root does not exist. Please, check to have processed the corresponding sample"
+                + var
+                + "_histos.root does not exist. Please, check to have processed the corresponding variable"
             )
             continue
         else:
             if excludeSig and s == "ttbar":
                 continue
-            f = ROOT.TFile(os.path.join("results", s + "_histos.root"))
-            h = f.Get(var)
+            h = _load_histogram(var, s)
+            if h is None:
+                continue
             setStyle(h, samp[s], 1, 1001)
             hs.Add(h, "HIST")
             leg.AddEntry(h, s, "f")
@@ -95,36 +111,43 @@ def plotVar(var, samples, isData=False, logScale=False):
     c = ROOT.TCanvas()
     if logScale:
         c.SetLogy()
-    hs = getStack(var, samples)[0]
-    leg = getStack(var, samples)[1]
+    stack_and_leg = getStack(var, samples)
+    hs = stack_and_leg[0]
+    leg = stack_and_leg[1]
     hs.Draw()
     ### Superimposing signal events (ttbar) to visualise its shape
-    if not os.path.exists(os.path.join("results", "ttbar_histos.root")):
+    if not os.path.exists(_hist_file_path(var)):
         print(
-            "File ttbar_histos.root does not exist. Please, check to have processed the corresponding sample"
+            "File "
+            + var
+            + "_histos.root does not exist. Please, check to have processed the corresponding variable"
         )
     else:
-        f = ROOT.TFile(os.path.join("results", "ttbar_histos.root"))
-        h = f.Get(var)
-        setStyle(h, samp["ttbar"], 0, 0)
-        h.SetLineColor(samp["ttbar"])
-        h.SetLineWidth(2)
-        h.Draw("histsame")
-        leg.AddEntry(h, "ttbar", "L")
+        h = _load_histogram(var, "ttbar")
+        if h is not None:
+            setStyle(h, samp["ttbar"], 0, 0)
+            h.SetLineColor(samp["ttbar"])
+            h.SetLineWidth(2)
+            h.Draw("histsame")
+            leg.AddEntry(h, "ttbar", "L")
 
     if isData:
-        if not os.path.exists(os.path.join("results", "data_histos.root")):
+        if not os.path.exists(_hist_file_path(var)):
             print(
-                "File data_histos.root does not exist. Please, check to have processed the corresponding sample"
+                "File "
+                + var
+                + "_histos.root does not exist. Please, check to have processed the corresponding variable"
             )
         else:
-            f = ROOT.TFile(os.path.join("results", "data_histos.root"))
-            h = f.Get(var)
-            setStyle(h, ROOT.kBlack, 0, 0)
-            h.Draw("same")
-            leg.AddEntry(h, "data", "*")
+            h = _load_histogram(var, "data")
+            if h is not None:
+                setStyle(h, ROOT.kBlack, 0, 0)
+                h.Draw("same")
+                leg.AddEntry(h, "data", "*")
 
-    ymax = max(hs.GetStack().Last().GetMaximum(), h.GetMaximum())
+    ymax = hs.GetStack().Last().GetMaximum()
+    if "h" in locals() and h is not None:
+        ymax = max(ymax, h.GetMaximum())
     leg.Draw("SAME")
     if isData:
         hs.SetMaximum(ymax * 1.3)
@@ -143,16 +166,17 @@ def plotVarNorm(var, samples, logScale=False):
     setStyleLegend(leg)
 
     for s in samples:
-        if not os.path.exists(os.path.join("results", s + "_histos.root")):
+        if not os.path.exists(_hist_file_path(var)):
             print(
                 "File "
-                + s
-                + "_histos.root does not exist. Please, check to have processed the corresponding sample"
+                + var
+                + "_histos.root does not exist. Please, check to have processed the corresponding variable"
             )
             continue
         else:
-            f = ROOT.TFile(os.path.join("results", s + "_histos.root"))
-            h = f.Get(var)
+            h = _load_histogram(var, s)
+            if h is None:
+                continue
             setStyle(h, samp[s], 0, 0)
             h.SetLineColor(samp[s])
             h.SetLineWidth(2)
@@ -182,21 +206,23 @@ def plotShapes(var, samples, logScale=False):
     h_bkg.Draw("hist")
     leg.AddEntry(h_bkg, "Background", "l")
 
-    if not os.path.exists(os.path.join("results", "ttbar_histos.root")):
+    if not os.path.exists(_hist_file_path(var)):
         print(
-            "File ttbar_histos.root does not exist. Please, check to have processed the corresponding sample"
+            "File "
+            + var
+            + "_histos.root does not exist. Please, check to have processed the corresponding variable"
         )
 
     else:
-        f = ROOT.TFile(os.path.join("results", "ttbar_histos.root"))
-        h = f.Get(var)
-        setStyle(h, samp["ttbar"], 0, 0)
-        h.SetLineColor(ROOT.kPink - 8)
-        h.SetLineWidth(2)
-        if h.Integral() != 0.0:
-            h.Scale(1.0 / h.Integral())
-        h.Draw("histsame")
-        leg.AddEntry(h, "Signal (ttbar)", "L")
+        h = _load_histogram(var, "ttbar")
+        if h is not None:
+            setStyle(h, samp["ttbar"], 0, 0)
+            h.SetLineColor(ROOT.kPink - 8)
+            h.SetLineWidth(2)
+            if h.Integral() != 0.0:
+                h.Scale(1.0 / h.Integral())
+            h.Draw("histsame")
+            leg.AddEntry(h, "Signal (ttbar)", "L")
 
     leg.Draw("SAME")
     c.SaveAs(os.path.join("results", var + "_Shape_MC.pdf"))
@@ -216,23 +242,23 @@ def getBkgHisto(var, samples):
 
 def getHisto(var, sample):
     h = ROOT.TH1F()
-    filename = sample + "_histos.root"
-    if not os.path.exists(os.path.join("results", filename)):
+    filename = _hist_file_path(var)
+    if not os.path.exists(filename):
         print(
             "File "
-            + filename
-            + " does not exist. Please, check to have processed the corresponding sample"
+            + var
+            + "_histos.root does not exist. Please, check to have processed the corresponding variable"
         )
 
     else:
-        f = ROOT.TFile(os.path.join("results", filename))
-        h = f.Get(var)
-        if sample == "data":
-            setStyle(h, ROOT.kBlack, 0, 0)
-        else:
-            setStyle(h, samp[sample], 0, 0)
-            h.SetLineColor(samp[sample])
-            h.SetLineWidth(2)
+        h = _load_histogram(var, sample)
+        if h is not None:
+            if sample == "data":
+                setStyle(h, ROOT.kBlack, 0, 0)
+            else:
+                setStyle(h, samp[sample], 0, 0)
+                h.SetLineColor(samp[sample])
+                h.SetLineWidth(2)
 
     return h
 

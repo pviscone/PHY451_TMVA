@@ -89,14 +89,15 @@ class MyAnalysis(object):
         result_ptrs = [h["ptr"] for h in self.histograms.values()]
         ROOT.RDF.RunGraphs(result_ptrs)
 
-        outfilename = self.sample + "_histos.root"
-        outfile = ROOT.TFile(os.path.join("results", outfilename), "RECREATE")
-        outfile.cd()
         for name, h_dict in self.histograms.items():
             h = h_dict["ptr"].GetValue()
+            outfilename = name + "_histos.root"
+            outfile = ROOT.TFile(os.path.join("results", outfilename), "UPDATE")
+            outfile.cd()
+            h.SetName(self.sample)
             h.SetXTitle(h_dict["label"])
             h.Write()
-        outfile.Close()
+            outfile.Close()
 
     def evaluateBDT(self, input_features):
         cpp_inputs = "{" + ", ".join([f'"{feat}"' for feat in input_features]) + "}"
