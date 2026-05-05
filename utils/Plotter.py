@@ -143,11 +143,11 @@ def plotVar(var, samples, isData=False, logScale=False):
                 + "_histos.root does not exist. Please, check to have processed the corresponding variable"
             )
         else:
-            h = _load_histogram(var, "data")
+            h = _load_histogram(var, "data_obs")
             if h is not None:
                 setStyle(h, ROOT.kBlack, 0, 0)
                 h.Draw("same")
-                leg.AddEntry(h, "data", "*")
+                leg.AddEntry(h, "data_obs", "*")
 
     ymax = hs.GetStack().Last().GetMaximum()
     if "h" in locals() and h is not None:
@@ -259,7 +259,7 @@ def getHisto(var, sample):
     else:
         h = _load_histogram(var, sample)
         if h is not None:
-            if sample == "data":
+            if sample == "data_obs":
                 setStyle(h, ROOT.kBlack, 0, 0)
             else:
                 setStyle(h, samp[sample], 0, 0)

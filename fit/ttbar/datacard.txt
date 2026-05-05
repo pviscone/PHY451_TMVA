@@ -1,0 +1,28 @@
+imax 1
+jmax 7
+kmax *
+
+----------------------------------------------------------------------------
+shapes *  SR  ../../results/BDTscore_histos.root  $PROCESS  $PROCESS_$SYSTEMATIC
+
+----------------------------------------------------------------------------
+bin           SR
+observation   -1
+
+----------------------------------------------------------------------------
+bin            SR      SR      SR      SR      SR      SR      SR      SR
+process        ttbar   wjets   dy      qcd     ww      wz      zz      single_top
+process        0       1       2       3       4       5       6       7
+rate           -1      -1      -1      -1      -1      -1      -1      -1
+
+----------------------------------------------------------------------------
+lumi 	 lnN   1.100   1.100   1.100   1.100   1.100   1.100   1.100   1.100
+tt_xsec  lnN   1.1     -       -       -       -       -       -       -
+wj_xsec  lnN   -       1.1     -       -       -       -       -       -
+dy_xsec  lnN   -       -       1.1     -       -       -       -       -
+qcd_xsec lnN   -       -       -       1.1     -       -       -       -
+ww_xsec  lnN   -       -       -       -       1.1     -       -       -
+wz_xsec  lnN   -       -       -       -       -       1.1     -       -
+zz_xsec  lnN   -       -       -       -       -       -       1.1     -
+st_xsec  lnN   -       -       -       -       -       -       -       1.1
+

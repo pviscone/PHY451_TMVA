@@ -75,7 +75,7 @@ plot_score_distribution()
 
 samples = {**signals, **backgrounds}
 
-Data = MyAnalysis("data")
+Data = MyAnalysis("data_obs")
 Data.preprocessEvents()
 Data.evaluateBDT(input_features)
 Data.processEvents()

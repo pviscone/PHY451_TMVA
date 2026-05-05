@@ -22,14 +22,14 @@ class MyAnalysis(object):
         and histograms are booked.
         """
 
-        if sample not in samp.keys() and sample != "data":
+        if sample not in samp.keys() and sample != "data_obs":
             print(
                 "Error"
             )  # RuntimeError("Sample %s not valid. please, choose among these: %s" % (sample, str(samp.keys())) )
             exit
         self.histograms = {}
-        self.sample = sample
-        self._file = ROOT.TFile("files/" + sample + ".root")
+        self.sample = sample if sample!="data" else "data_obs"
+        self._file = ROOT.TFile("files/" + sample.replace("data_obs","data") + ".root")
         self._tree = self._file.Get("events")
         self.rdf = ROOT.RDataFrame(self._tree)
         self.nEvents = self._tree.GetEntries()

@@ -2,7 +2,10 @@ DIR="$( dirname -- "${BASH_SOURCE[0]}"; )";
 DIR="$( realpath -e -- "$DIR"; )";
 
 source /app/cern/root_v6.32.10/bin/thisroot.sh
-export PATH="$DIR/Combine/build/bin:$PATH"
+export PATH=$DIR/Combine/build/bin:$PATH
+export LD_LIBRARY_PATH=$DIR/Combine/build/lib:$LD_LIBRARY_PATH
+export PYTHONPATH=$DIR/Combine/build/python:$PYTHONPATH
+
 
 if [[ " $@ " =~ " clean " ]]; then
     rm -rf $DIR/Combine
