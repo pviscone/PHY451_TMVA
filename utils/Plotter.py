@@ -119,6 +119,19 @@ def plotVar(var, samples, isData=False, logScale=False):
     hs = stack_and_leg[0]
     leg = stack_and_leg[1]
     hs.Draw()
+    # draw statistical uncertainty band for the total background
+    try:
+        total_bkg = hs.GetStack().Last().Clone(f"{var}_statband")
+        total_bkg.SetDirectory(0)
+        ROOT.SetOwnership(total_bkg, False)
+        total_bkg.SetFillColor(ROOT.kGray + 2)
+        total_bkg.SetFillStyle(3001)
+        total_bkg.SetLineColor(0)
+        total_bkg.SetMarkerSize(0)
+        total_bkg.Draw("E2 same")
+        leg.AddEntry(total_bkg, "Stat. unc.", "f")
+    except Exception:
+        pass
     ### Superimposing signal events (ttbar) to visualise its shape
     if not os.path.exists(_hist_file_path(var)):
         print(
@@ -207,10 +220,24 @@ def plotShapes(var, samples, logScale=False):
     h_bkg = hs.GetStack().Last()
     if h_bkg.Integral() != 0.0:
         h_bkg.Scale(1.0 / h_bkg.Integral())
+    # draw the background line
     setStyle(h_bkg, ROOT.kBlue, 0, 0)
     h_bkg.SetLineWidth(2)
     h_bkg.Draw("hist")
     leg.AddEntry(h_bkg, "Background", "l")
+    # draw statistical uncertainty band (normalized)
+    try:
+        stat_band = h_bkg.Clone(f"{var}_shape_statband")
+        stat_band.SetDirectory(0)
+        ROOT.SetOwnership(stat_band, False)
+        stat_band.SetFillColor(ROOT.kGray + 2)
+        stat_band.SetFillStyle(3001)
+        stat_band.SetLineColor(0)
+        stat_band.SetMarkerSize(0)
+        stat_band.Draw("E2 same")
+        leg.AddEntry(stat_band, "Stat. unc.", "f")
+    except Exception:
+        pass
 
     if not os.path.exists(_hist_file_path(var)):
         print(
