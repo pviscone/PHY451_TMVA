@@ -61,18 +61,28 @@ class MyAnalysis(object):
         jetPtCut = 45
         njetCut = 2
 
+        #When using Vary you can't redefine the collection
+        #that's why i am changing name to "Jet" after every selection
+        self.rdf = self.rdf.Vary(
+            "Jet_pt",
+            "ROOT::VecOps::RVec<ROOT::RVecF>{Jet_pt*0.9, Jet_pt*1.1};",
+            ["down", "up"],
+            "JES",
+        )
         self.rdf = FilterCollection(
             self.rdf,
             "Jet",
+            "Jetv1",
             mask=f"Jet_ID == 1 && Jet_pt > {jetPtCut}",
-        ).Filter(f"NJet >= {njetCut}")
+        ).Filter(f"NJetv1 >= {njetCut}")
         # reorder jets by pt
-        self.rdf = SortCollection(self.rdf, "Jet", sort_by="Jet_pt")
+        self.rdf = SortCollection(self.rdf, "Jetv1", "Jetv2", sort_by="Jetv1_pt")
         # select up to 4 jets (with highest pt)
         self.rdf = FilterCollection(
             self.rdf,
-            "Jet",
-            indices="ROOT::VecOps::Range(NJet > 4 ? 4 : NJet)",
+            "Jetv2",
+            "GoodJet",
+            indices="ROOT::VecOps::Range(NJetv2 > 4 ? 4 : NJetv2)",
         )
 
         #! ================ Muon selection ================
@@ -106,10 +116,10 @@ class MyAnalysis(object):
             "MedianJet_dR",
             """
             ROOT::RVecF dRs;
-            auto comb = ROOT::VecOps::Combinations(Jet_eta, 2);
+            auto comb = ROOT::VecOps::Combinations(GoodJet_eta, 2);
             for (size_t &i1 : comb[0]) {
                 for (size_t &i2 : comb[1]) {
-                    float dR = ROOT::VecOps::DeltaR(Jet_eta[i1], Jet_eta[i2], Jet_phi[i1], Jet_phi[i2]);
+                    float dR = ROOT::VecOps::DeltaR(GoodJet_eta[i1], GoodJet_eta[i2], GoodJet_phi[i1], GoodJet_phi[i2]);
                     dRs.push_back(dR);
                 }
             }
@@ -130,16 +140,16 @@ class MyAnalysis(object):
             "InvariantMass_LeastBtaggedJets",
             """
             if (NJet < 2) {return (float) -1.0;}
-            ROOT::RVecI sorted_indices = ROOT::VecOps::Argsort(Jet_btag);
+            ROOT::RVecI sorted_indices = ROOT::VecOps::Argsort(GoodJet_btag);
             return ROOT::VecOps::InvariantMasses(
-                ROOT::RVecF{Jet_pt[sorted_indices[0]]},
-                ROOT::RVecF{Jet_eta[sorted_indices[0]]},
-                ROOT::RVecF{Jet_phi[sorted_indices[0]]},
-                ROOT::RVecF{Jet_mass[sorted_indices[0]]},
-                ROOT::RVecF{Jet_pt[sorted_indices[1]]},
-                ROOT::RVecF{Jet_eta[sorted_indices[1]]},
-                ROOT::RVecF{Jet_phi[sorted_indices[1]]},
-                ROOT::RVecF{Jet_mass[sorted_indices[1]]})[0]
+                ROOT::RVecF{GoodJet_pt[sorted_indices[0]]},
+                ROOT::RVecF{GoodJet_eta[sorted_indices[0]]},
+                ROOT::RVecF{GoodJet_phi[sorted_indices[0]]},
+                ROOT::RVecF{GoodJet_mass[sorted_indices[0]]},
+                ROOT::RVecF{GoodJet_pt[sorted_indices[1]]},
+                ROOT::RVecF{GoodJet_eta[sorted_indices[1]]},
+                ROOT::RVecF{GoodJet_phi[sorted_indices[1]]},
+                ROOT::RVecF{GoodJet_mass[sorted_indices[1]]})[0]
             """,
         )
 
@@ -147,19 +157,19 @@ class MyAnalysis(object):
             "MinInvariantMass_Jets",
             """
             if (NJet < 2) {return (float) -1.0;}
-            auto comb = ROOT::VecOps::Combinations(Jet_eta, 2);
+            auto comb = ROOT::VecOps::Combinations(GoodJet_eta, 2);
             ROOT::RVecF invMasses;
             for (size_t &i1 : comb[0]) {
                 for (size_t &i2 : comb[1]) {
                     float invM = ROOT::VecOps::InvariantMasses(
-                        ROOT::RVecF{Jet_pt[i1]},
-                        ROOT::RVecF{Jet_eta[i1]},
-                        ROOT::RVecF{Jet_phi[i1]},
-                        ROOT::RVecF{Jet_mass[i1]},
-                        ROOT::RVecF{Jet_pt[i2]},
-                        ROOT::RVecF{Jet_eta[i2]},
-                        ROOT::RVecF{Jet_phi[i2]},
-                        ROOT::RVecF{Jet_mass[i2]})[0];
+                        ROOT::RVecF{GoodJet_pt[i1]},
+                        ROOT::RVecF{GoodJet_eta[i1]},
+                        ROOT::RVecF{GoodJet_phi[i1]},
+                        ROOT::RVecF{GoodJet_mass[i1]},
+                        ROOT::RVecF{GoodJet_pt[i2]},
+                        ROOT::RVecF{GoodJet_eta[i2]},
+                        ROOT::RVecF{GoodJet_phi[i2]},
+                        ROOT::RVecF{GoodJet_mass[i2]})[0];
                     invMasses.push_back(invM);
                 }
             }
@@ -174,16 +184,16 @@ class MyAnalysis(object):
             "InvariantMass_LeadingMuon_MostbTaggedJet",
             """
             if (NJet < 1) {return (float) -1.0;}
-            ROOT::RVecI sorted_indices = ROOT::VecOps::Reverse(ROOT::VecOps::Argsort(Jet_btag));
+            ROOT::RVecI sorted_indices = ROOT::VecOps::Reverse(ROOT::VecOps::Argsort(GoodJet_btag));
             return ROOT::VecOps::InvariantMasses(
                 ROOT::RVecF{LeadingMuon_pt},
                 ROOT::RVecF{LeadingMuon_eta},
                 ROOT::RVecF{LeadingMuon_phi},
                 ROOT::RVecF{0.105}, // muon mass
-                ROOT::RVecF{Jet_pt[sorted_indices[0]]},
-                ROOT::RVecF{Jet_eta[sorted_indices[0]]},
-                ROOT::RVecF{Jet_phi[sorted_indices[0]]},
-                ROOT::RVecF{Jet_mass[sorted_indices[0]]})[0]
+                ROOT::RVecF{GoodJet_pt[sorted_indices[0]]},
+                ROOT::RVecF{GoodJet_eta[sorted_indices[0]]},
+                ROOT::RVecF{GoodJet_phi[sorted_indices[0]]},
+                ROOT::RVecF{GoodJet_mass[sorted_indices[0]]})[0]
             """,
         )
 
@@ -191,10 +201,10 @@ class MyAnalysis(object):
             "dR_LeadingMuon_MostbTaggedJet",
             """
             if (NJet < 1) {return (float) -1.0;}
-            ROOT::RVecI sorted_indices = ROOT::VecOps::Reverse(ROOT::VecOps::Argsort(Jet_btag));
+            ROOT::RVecI sorted_indices = ROOT::VecOps::Reverse(ROOT::VecOps::Argsort(GoodJet_btag));
             return ROOT::VecOps::DeltaR(
-                LeadingMuon_eta, Jet_eta[sorted_indices[0]],
-                LeadingMuon_phi, Jet_phi[sorted_indices[0]]
+                LeadingMuon_eta, GoodJet_eta[sorted_indices[0]],
+                LeadingMuon_phi, GoodJet_phi[sorted_indices[0]]
             );
             """,
         )
@@ -203,22 +213,22 @@ class MyAnalysis(object):
             "dR_LeastBtaggedJets",
             """
             if (NJet < 2) {return (float) -1.0;}
-            ROOT::RVecI sorted_indices = ROOT::VecOps::Argsort(Jet_btag);
+            ROOT::RVecI sorted_indices = ROOT::VecOps::Argsort(GoodJet_btag);
             return ROOT::VecOps::DeltaR(
-                Jet_eta[sorted_indices[0]], Jet_eta[sorted_indices[1]],
-                Jet_phi[sorted_indices[0]], Jet_phi[sorted_indices[1]]
+                GoodJet_eta[sorted_indices[0]], GoodJet_eta[sorted_indices[1]],
+                GoodJet_phi[sorted_indices[0]], GoodJet_phi[sorted_indices[1]]
             );
             """,
         )
 
-        self.rdf = self.rdf.Define("HT", "ROOT::VecOps::Sum(Jet_pt)")
+        self.rdf = self.rdf.Define("HT", "ROOT::VecOps::Sum(GoodJet_pt)")
 
         self.rdf = self.rdf.Define(
             "Average2MostBTagged",
             """
             if (NJet < 2) {return (float) -1.0;}
-            ROOT::RVecI sorted_indices = ROOT::VecOps::Reverse(ROOT::VecOps::Argsort(Jet_btag));
-            return (float) 0.5 * (Jet_btag[sorted_indices[0]] + Jet_btag[sorted_indices[1]]);
+            ROOT::RVecI sorted_indices = ROOT::VecOps::Reverse(ROOT::VecOps::Argsort(GoodJet_btag));
+            return (float) 0.5 * (GoodJet_btag[sorted_indices[0]] + GoodJet_btag[sorted_indices[1]]);
             """,
         )
 
@@ -236,9 +246,9 @@ class MyAnalysis(object):
         }
 
     def runHistos(self):
-        self.defineHisto("NJet", "# of jets", (6, -0.5, 6.5))
-        self.defineHisto("Jet_pt", "Jet pT", (50, 0.0, 200.0))
-        self.defineHisto("Jet_btag", "Jet b-tag", (10, 1.0, 6.0))
+        self.defineHisto("NGoodJet", "# of jets", (6, -0.5, 6.5))
+        self.defineHisto("GoodJet_pt", "Jet pT", (50, 0.0, 200.0))
+        self.defineHisto("GoodJet_btag", "Jet b-tag", (10, 1.0, 6.0))
         self.defineHisto("MET_pt", "MET pT", (25, 0.0, 300.0))
         self.defineHisto("LeadingMuon_pt", "Leading Muon pT", (50, 0.0, 200.0))
         self.defineHisto(
@@ -287,7 +297,8 @@ class MyAnalysis(object):
         ROOT.RDF.RunGraphs(result_ptrs)
 
         for name, h_dict in self.histograms.items():
-            h = h_dict["ptr"].GetValue()
+            h_var = ROOT.RDF.Experimental.VariationsFor(h_dict["ptr"])
+            h = h_var["nominal"]
             outfilename = name + "_histos.root"
             outpath = os.path.join("results", outfilename)
             # Use RECREATE on first write to file, UPDATE on subsequent writes
@@ -302,6 +313,17 @@ class MyAnalysis(object):
             h.SetName(self.sample)
             h.SetXTitle(h_dict["label"])
             h.Write()
+            variations = h_var.GetKeys()
+            for var in variations:
+                if var == "nominal":
+                    continue
+                h_variated = h_var[var]
+                h_variated.SetName(
+                    f"{self.sample}_{var.replace(':up', 'Up').replace(':down', 'Down')}"
+                )
+                h_variated.SetXTitle(h_dict["label"])
+                h_variated.Write()
+
             outfile.Close()
 
     def evaluateBDT(self, input_features):

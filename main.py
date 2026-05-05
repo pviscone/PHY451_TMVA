@@ -9,7 +9,7 @@ signals = {}
 backgrounds = {}
 
 input_features = [
-    "Alt$(Jet_pt[0], -999)",
+    "Alt$(GoodJet_pt[0], -999)",
     "Average2MostBTagged",
     "MedianJet_dR",
     "InvariantMass_LeastBtaggedJets",
