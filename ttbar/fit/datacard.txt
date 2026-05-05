@@ -3,7 +3,7 @@ jmax 6
 kmax *
 
 ----------------------------------------------------------------------------
-shapes *  SR  ../../results/BDTscore_histos.root  $PROCESS  $PROCESS_$SYSTEMATIC
+shapes *  SR  ../results/BDTscore_histos.root  $PROCESS  $PROCESS_$SYSTEMATIC
 
 ----------------------------------------------------------------------------
 bin           SR

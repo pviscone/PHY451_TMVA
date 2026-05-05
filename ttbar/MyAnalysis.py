@@ -29,7 +29,7 @@ class MyAnalysis(object):
             exit
         self.histograms = {}
         self.sample = sample if sample != "data" else "data_obs"
-        self._file = ROOT.TFile("files/" + sample.replace("data_obs", "data") + ".root")
+        self._file = ROOT.TFile("../files/" + sample.replace("data_obs", "data") + ".root")
         self._tree = self._file.Get("events")
         self.rdf = ROOT.RDataFrame(self._tree)
         self.nEvents = self._tree.GetEntries()
