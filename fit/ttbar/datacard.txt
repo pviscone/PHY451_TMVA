@@ -25,4 +25,4 @@ ww_xsec  lnN   -       -       -       -       1.1     -       -       -
 wz_xsec  lnN   -       -       -       -       -       1.1     -       -
 zz_xsec  lnN   -       -       -       -       -       -       1.1     -
 st_xsec  lnN   -       -       -       -       -       -       -       1.1
-
+* autoMCStats 0	1 1
