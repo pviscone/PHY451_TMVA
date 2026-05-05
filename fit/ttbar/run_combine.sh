@@ -8,6 +8,7 @@ combine workspace.root -M MultiDimFit \
    --points 100 \
    -t -1 --expectSignal=1 \
    --saveFitResult \
+   --saveWorkspace \
    --setParameterRanges r=0.8,1.2 \
    | tee result/combine_exp_log.out
 
@@ -17,6 +18,7 @@ combine workspace.root -M MultiDimFit \
   --algo grid \
   --points 100 \
   --saveFitResult \
+  --saveWorkspace \
   --setParameterRanges r=0.8,1.2 \
  | tee result/combine_obs_log.out
 
@@ -27,6 +29,7 @@ combine workspace.root -M MultiDimFit \
     --points 100 \
     -t -1 --expectSignal=1 \
     --saveFitResult \
+    --saveWorkspace \
     --freezeParameters allConstrainedNuisances \
     --setParameterRanges r=0.8,1.2 \
     | tee result/combine_exp_log.out
@@ -38,6 +41,7 @@ combine workspace.root -M MultiDimFit \
    --points 100 \
    --freezeParameters allConstrainedNuisances \
    --saveFitResult \
+   --saveWorkspace \
    --setParameterRanges r=0.8,1.2 \
   | tee result/combine_obs_log.out
  
