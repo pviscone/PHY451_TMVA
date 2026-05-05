@@ -20,13 +20,37 @@ combine workspace.root -M MultiDimFit \
   --setParameterRanges r=0.8,1.2 \
  | tee result/combine_obs_log.out
 
+#Profile likelihood on Asimov dataset (stat only)
+ combine workspace.root -M MultiDimFit \
+    -n _ttbar_exp_stat_only \
+    --algo grid \
+    --points 100 \
+    -t -1 --expectSignal=1 \
+    --saveFitResult \
+    --freezeParameters allConstrainedNuisances \
+    --setParameterRanges r=0.8,1.2 \
+    | tee result/combine_exp_log.out
+ 
+ #Profile likelihood on observed data (stat only)
+ combine workspace.root -M MultiDimFit \
+   -n _ttbar_obs_stat_only \
+   --algo grid \
+   --points 100 \
+   --freezeParameters allConstrainedNuisances \
+   --saveFitResult \
+   --setParameterRanges r=0.8,1.2 \
+  | tee result/combine_obs_log.out
+ 
+
 	
 mv higgsCombine_ttbar_exp.MultiDimFit.mH120.root result/likelihood_exp.root
 mv higgsCombine_ttbar_obs.MultiDimFit.mH120.root result/likelihood_obs.root
+mv higgsCombine_ttbar_exp_stat_only.MultiDimFit.mH120.root result/likelihood_exp_stat_only.root
+mv higgsCombine_ttbar_obs_stat_only.MultiDimFit.mH120.root result/likelihood_obs_stat_only.root
 
 #Plot the likelihood scan
-plot1DScan.py result/likelihood_exp.root -o result/likelihood_exp --main-label "Stat."  --y-max 3 --y-cut 40| tee result/plot1DScan_exp.out
-plot1DScan.py result/likelihood_obs.root -o result/likelihood_obs --main-label "Stat."  --y-max 3 --y-cut 40| tee result/plot1DScan_obs.out
+plot1DScan.py result/likelihood_exp.root -o result/likelihood_exp --main-label "Total" --main-color 1 --others  result/likelihood_exp_stat_only.root:"Stat-only":2  --y-max 3 --y-cut 40| tee result/plot1DScan_exp.out
+plot1DScan.py result/likelihood_obs.root -o result/likelihood_obs --main-label "Total" --main-color 1 --others result/likelihood_obs_stat_only.root:"Stat-only":2 --y-max 3 --y-cut 40| tee result/plot1DScan_obs.out
 
 rm -f combine_logger.out
 mv workspace.root result/
