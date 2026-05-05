@@ -28,8 +28,8 @@ class MyAnalysis(object):
             )  # RuntimeError("Sample %s not valid. please, choose among these: %s" % (sample, str(samp.keys())) )
             exit
         self.histograms = {}
-        self.sample = sample if sample!="data" else "data_obs"
-        self._file = ROOT.TFile("files/" + sample.replace("data_obs","data") + ".root")
+        self.sample = sample if sample != "data" else "data_obs"
+        self._file = ROOT.TFile("files/" + sample.replace("data_obs", "data") + ".root")
         self._tree = self._file.Get("events")
         self.rdf = ROOT.RDataFrame(self._tree)
         self.nEvents = self._tree.GetEntries()
@@ -213,6 +213,15 @@ class MyAnalysis(object):
 
         self.rdf = self.rdf.Define("HT", "ROOT::VecOps::Sum(Jet_pt)")
 
+        self.rdf = self.rdf.Define(
+            "Average2MostBTagged",
+            """
+            if (NJet < 2) {return (float) -1.0;}
+            ROOT::RVecI sorted_indices = ROOT::VecOps::Reverse(ROOT::VecOps::Argsort(Jet_btag));
+            return (float) 0.5 * (Jet_btag[sorted_indices[0]] + Jet_btag[sorted_indices[1]]);
+            """,
+        )
+
     def processEvents(self):
         # Implement additional cuts
         self.runHistos()
@@ -236,7 +245,7 @@ class MyAnalysis(object):
             "LeadingMuon_relIso", "Leading Muon relative isolation", (25, 0.0, 0.3)
         )
         self.defineHisto("NMuon", "# of isolated muons", (5, 0.5, 5.5))
-        self.defineHisto("BDTscore", "BDT score", (25, -1.0, 1.0))
+        self.defineHisto("BDTscore", "BDT score", (20, -1.0, 1.0))
         self.defineHisto("MedianJet_dR", "Median dR between jets", (25, 0.0, 5.0))
         self.defineHisto(
             "InvariantMass_LeastBtaggedJets",
@@ -266,6 +275,11 @@ class MyAnalysis(object):
             (25, 0.0, 200.0),
         )
         self.defineHisto("HT", "HT [GeV]", (25, 0.0, 500.0))
+        self.defineHisto(
+            "Average2MostBTagged",
+            "Average b-tag of the 2 most btagged jets",
+            (45, -1, 6.0),
+        )
 
     def saveHistos(self):
         # Trigger computation of all histograms in parallel using RunGraphs

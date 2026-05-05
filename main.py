@@ -10,6 +10,7 @@ backgrounds = {}
 
 input_features = [
     "Alt$(Jet_pt[0], -999)",
+    "Average2MostBTagged",
     "MedianJet_dR",
     "InvariantMass_LeastBtaggedJets",
     "InvariantMass_LeadingMuon_MostbTaggedJet",
@@ -70,7 +71,7 @@ for background in ["qcd", "zz", "wz", "ww", "single_top", "dy", "wjets"]:
     backgrounds[background] = MyAnalysis(background)
     backgrounds[background].preprocessEvents()
 
-train_BDT(signals, backgrounds, input_features, max_depth=4, nTrees=35, train_frac=0.5)
+train_BDT(signals, backgrounds, input_features, max_depth=4, nTrees=25, train_frac=0.5)
 plot_score_distribution()
 
 samples = {**signals, **backgrounds}
