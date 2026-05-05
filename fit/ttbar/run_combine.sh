@@ -53,8 +53,8 @@ mv higgsCombine_ttbar_exp_stat_only.MultiDimFit.mH120.root result/likelihood_exp
 mv higgsCombine_ttbar_obs_stat_only.MultiDimFit.mH120.root result/likelihood_obs_stat_only.root
 
 #Plot the likelihood scan
-plot1DScan.py result/likelihood_exp.root -o result/likelihood_exp --main-label "Total" --main-color 1 --others  result/likelihood_exp_stat_only.root:"Stat-only":2  --y-max 3 --y-cut 40| tee result/plot1DScan_exp.out
-plot1DScan.py result/likelihood_obs.root -o result/likelihood_obs --main-label "Total" --main-color 1 --others result/likelihood_obs_stat_only.root:"Stat-only":2 --y-max 3 --y-cut 40| tee result/plot1DScan_obs.out
+plot1DScan.py result/likelihood_exp.root -o result/likelihood_exp_graph --main-label "Total" --main-color 1 --others  result/likelihood_exp_stat_only.root:"Stat-only":2  --y-max 3 --y-cut 40| tee result/plot1DScan_exp.out
+plot1DScan.py result/likelihood_obs.root -o result/likelihood_obs_graph --main-label "Total" --main-color 1 --others result/likelihood_obs_stat_only.root:"Stat-only":2 --y-max 3 --y-cut 40| tee result/plot1DScan_obs.out
 
 rm -f combine_logger.out
 mv workspace.root result/
