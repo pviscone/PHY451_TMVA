@@ -1,6 +1,8 @@
 DIR="$( dirname -- "${BASH_SOURCE[0]}"; )";
 DIR="$( realpath -e -- "$DIR"; )";
 
+source /app/cern/root_v6.32.10/bin/thisroot.sh
+alias python="python3.11"
 export PATH=$DIR/Combine/build/bin:$PATH
 export LD_LIBRARY_PATH=$DIR/Combine/build/lib:$LD_LIBRARY_PATH
 export PYTHONPATH=$DIR/Combine/build/python:$PYTHONPATH
@@ -20,4 +22,6 @@ if [[ " $@ " =~ " build " ]]; then
     cmake .. -DUSE_VDT=FALSE
     cmake --build . -j8
     cd ../..
+    sed -i "s|/usr/bin/env python3|/usr/bin/python3.11|g" $DIR/Combine/build/bin/*.py
+    python3.11 -m pip install pandas
 fi
