@@ -45,12 +45,23 @@ combine workspace.root -M MultiDimFit \
    --setParameterRanges r=0.8,1.2 \
   | tee result/combine_obs_log.out
  
-
+combine workspace.root -M FitDiagnostics \
+  -n _ttbar \
+  --rMin -2 --rMax 2 \
+  --saveShapes \
+  --saveWithUncertainties \
+  --saveNormalizations \
+  --plots
+mv fitDiagnostics_ttbar.root result
 	
 mv higgsCombine_ttbar_exp.MultiDimFit.mH120.root result/likelihood_exp.root
 mv higgsCombine_ttbar_obs.MultiDimFit.mH120.root result/likelihood_obs.root
 mv higgsCombine_ttbar_exp_stat_only.MultiDimFit.mH120.root result/likelihood_exp_stat_only.root
 mv higgsCombine_ttbar_obs_stat_only.MultiDimFit.mH120.root result/likelihood_obs_stat_only.root
+mv *.root result/
+mv *.pdf result/
+mv *.png result/
+python plot_postfit.py
 
 #Plot the likelihood scan
 plot1DScan.py result/likelihood_exp.root -o result/likelihood_exp_graph --main-label "Total" --main-color 1 --others  result/likelihood_exp_stat_only.root:"Stat-only":2  --y-max 3 --y-cut 40| tee result/plot1DScan_exp.out
