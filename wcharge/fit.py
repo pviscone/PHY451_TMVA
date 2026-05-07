@@ -1,12 +1,4 @@
-#!/usr/bin/env python3
-"""
-Three-step template fit for W charge asymmetry:
-  1. Fit double-Gaussian shape on signal MC
-  2. Fit erf shape on background MC
-  3. Fit only signal + background normalisations on data (shapes frozen)
-
-Uses PyROOT / TF1 with binned likelihood throughout.
-"""
+#!/usr/bin/python3.11
 
 import ROOT
 import ctypes
@@ -26,19 +18,12 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 ETA_BINS = [0.0, 0.4, 0.8, 1.5, 1.8, 2.1]
 N_ETA = len(ETA_BINS) - 1
 
-# ── Formula pieces ────────────────────────────────────────────────────────────
-# Signal: double Gaussian, normalised.
-#   p0 = total signal norm
-#   p1 = fraction of gauss1
-#   p2 = mean1,  p3 = sigma1
-#   p4 = mean2,  p5 = sigma2
 SIG_FORMULA = "[0]*( [1]*TMath::Gaus(x,[2],[3],1) + (1-[1])*TMath::Gaus(x,[4],[5],1) )"
 
-# Background: erf turn-on.
-#   p6 = bkg norm,  p7 = turn-on position,  p8 = width
+
 BKG_FORMULA = "[6]*(1 - TMath::Erf((x-[7])/[8]))"
 
-# Combined (used for data fit with shapes frozen)
+
 FULL_FORMULA = SIG_FORMULA + " + " + BKG_FORMULA
 
 
@@ -51,12 +36,8 @@ def open_hist(root_file, name):
     return h
 
 
-# ── Step 1: fit signal shape ──────────────────────────────────────────────────
+# fit signal shape with 2 gaussians
 def fit_signal_shape(h_sig, tag):
-    """
-    Fit double Gaussian to signal MC.
-    Returns a dict of frozen shape parameters {p1..p5} and their errors.
-    """
     xmin = h_sig.GetXaxis().GetXmin()
     xmax = h_sig.GetXaxis().GetXmax()
 
@@ -80,12 +61,8 @@ def fit_signal_shape(h_sig, tag):
     return f, shape
 
 
-# ── Step 2: fit background shape ──────────────────────────────────────────────
+#fit background shape with erf function
 def fit_bkg_shape(h_bkg, tag):
-    """
-    Fit erf to background MC.
-    Returns a dict of frozen shape parameters {p7, p8} and their errors.
-    """
     xmin = h_bkg.GetXaxis().GetXmin()
     xmax = h_bkg.GetXaxis().GetXmax()
 
@@ -104,28 +81,24 @@ def fit_bkg_shape(h_bkg, tag):
     return f, shape
 
 
-# ── Step 3: fit data normalisations ──────────────────────────────────────────
+#fit data normalisations
 def fit_data_norms(h_data, sig_shape, bkg_shape, tag):
-    """
-    Fit data with all shapes frozen; only p0 (signal norm) and p6 (bkg norm) float.
-    Returns the fitted TF1 and (N_sig, eN_sig).
-    """
     xmin = h_data.GetXaxis().GetXmin()
     xmax = h_data.GetXaxis().GetXmax()
 
     f = ROOT.TF1(f"f_data_{tag}", FULL_FORMULA, xmin, xmax)
 
-    # ---- seed normalisations ----
-    f.SetParameter(0, h_data.Integral() * 0.8)  # signal norm (free)
-    f.SetParameter(6, h_data.Integral() * 0.2)  # bkg norm    (free)
 
-    # ---- freeze signal shape parameters ----
+    f.SetParameter(0, h_data.Integral() * 0.8)
+    f.SetParameter(6, h_data.Integral() * 0.2)
+
+    #Freeze signal shape params
     for p in range(1, 6):
         val, _ = sig_shape[p]
         f.SetParameter(p, val)
         f.FixParameter(p, val)
 
-    # ---- freeze background shape parameters ----
+    #Freeze bkg shape params
     for p in range(7, 9):
         val, _ = bkg_shape[p]
         f.SetParameter(p, val)
@@ -145,9 +118,7 @@ def fit_data_norms(h_data, sig_shape, bkg_shape, tag):
     return f, N_sig, eN_sig, N_bkg, eN_bkg
 
 
-# ── Plotting helpers ──────────────────────────────────────────────────────────
 def _component_tfs(fit_func, xmin, xmax):
-    """Build individual component TF1s from a fitted full function."""
     f_g1 = ROOT.TF1("_g1", "[0]*[1]*TMath::Gaus(x,[2],[3],1)", xmin, xmax)
     f_g2 = ROOT.TF1("_g2", "[0]*(1-[1])*TMath::Gaus(x,[4],[5],1)", xmin, xmax)
     f_erf = ROOT.TF1("_erf", "[6]*(1-TMath::Erf((x-[7])/[8]))", xmin, xmax)
@@ -167,7 +138,6 @@ def _component_tfs(fit_func, xmin, xmax):
 
 
 def save_shape_plot(hist, fit_func, title, fname_out, extra_tfs=None):
-    """Generic: draw histogram + fit (+ optional component curves)."""
     c = ROOT.TCanvas(f"c_{fname_out}", "", 800, 600)
     c.SetLeftMargin(0.12)
     hist.SetMarkerStyle(20)
@@ -196,7 +166,6 @@ def save_shape_plot(hist, fit_func, title, fname_out, extra_tfs=None):
 
 
 def save_data_plot(h_data, f_full, f_g1, f_g2, f_erf, title, fname_out):
-    """Draw data + full fit + all components."""
     c = ROOT.TCanvas(f"c_{fname_out}", "", 800, 600)
     c.SetLeftMargin(0.12)
     h_data.SetMarkerStyle(20)
@@ -226,8 +195,6 @@ def save_data_plot(h_data, f_full, f_g1, f_g2, f_erf, title, fname_out):
     print(f"  Saved {fname_out}")
     c.Close()
 
-
-# ── Main ──────────────────────────────────────────────────────────────────────
 def main():
     tf_sig = ROOT.TFile.Open(SIGNAL_FILE)
     tf_bkg = ROOT.TFile.Open(BKG_FILE)
@@ -263,13 +230,12 @@ def main():
             h_bkg = open_hist(tf_bkg, hname)
             h_data = open_hist(tf_data, hname)
 
-            # --- colour the MC histograms ---
             mc_color = ROOT.kRed + 1 if charge == "plus" else ROOT.kBlue + 1
             for h in (h_sig, h_bkg):
                 h.SetLineColor(mc_color)
                 h.SetMarkerColor(mc_color)
 
-            # Step 1: signal shape
+            #Signal shape fit on MC
             print(f"  [{charge}] Fitting signal shape ...")
             f_sig_fit, sig_shape = fit_signal_shape(h_sig, tag)
             save_shape_plot(
@@ -322,7 +288,7 @@ def main():
                 extra_tfs=[_g1_tmp, _g2_tmp],
             )
 
-            # Step 2: background shape
+            #Background shape fit on MC
             print(f"  [{charge}] Fitting background shape ...")
             f_bkg_fit, bkg_shape = fit_bkg_shape(h_bkg, tag)
             save_shape_plot(
@@ -332,7 +298,7 @@ def main():
                 os.path.join(OUTPUT_DIR, f"bkg_{tag}.png"),
             )
 
-            # Step 3: data normalisation fit
+            #Normalization fit on data
             print(f"  [{charge}] Fitting data normalisations ...")
             f_data_fit, N_sig, eN_sig, N_bkg, eN_bkg = fit_data_norms(
                 h_data, sig_shape, bkg_shape, tag

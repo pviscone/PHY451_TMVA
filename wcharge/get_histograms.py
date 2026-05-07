@@ -1,8 +1,5 @@
 # %%
 import ROOT
-import sys
-
-sys.path.append("../ttbar/utils")
 
 from utils import definePtEtaPhiM, FilterCollection, DefineFromIndex
 
