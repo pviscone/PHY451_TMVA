@@ -89,7 +89,7 @@ class MyAnalysis(object):
             "Muon",
             # new_col="IsoMu", # this rename the skimmed collection
             mask=f"Muon_pt > {muonPtCut} && Muon_relIso < {muonRelIsoCut}",  # removed transition region
-        ).Filter("NMuon > 0")  # to select events with at least 1 isolated muon
+        ).Filter("NMuon == 1")  # to select events with at least 1 isolated muon
         # reorder muons by pt
         self.rdf = SortCollection(self.rdf, "Muon", sort_by="Muon_pt")
         # select muon with highest pt (leading muon)
@@ -192,9 +192,12 @@ class MyAnalysis(object):
             """
             if (NJet < 1) {return (float) -1.0;}
             ROOT::RVecI sorted_indices = ROOT::VecOps::Reverse(ROOT::VecOps::Argsort(Jet_btag));
-            return ROOT::VecOps::DeltaR(
+            return std::min(ROOT::VecOps::DeltaR(
                 LeadingMuon_eta, Jet_eta[sorted_indices[0]],
-                LeadingMuon_phi, Jet_phi[sorted_indices[0]]
+                LeadingMuon_phi, Jet_phi[sorted_indices[0]]),
+                ROOT::VecOps::DeltaR(
+                LeadingMuon_eta, Jet_eta[sorted_indices[1]],
+                LeadingMuon_phi, Jet_phi[sorted_indices[1]])
             );
             """,
         )
@@ -238,14 +241,15 @@ class MyAnalysis(object):
     def runHistos(self):
         self.defineHisto("NJet", "# of jets", (6, -0.5, 6.5))
         self.defineHisto("Jet_pt", "Jet pT", (50, 0.0, 200.0))
-        self.defineHisto("Jet_btag", "Jet b-tag", (10, 1.0, 6.0))
+        self.defineHisto("Jet_btag", "Jet b-tag", (20, -1.0, 6.0))
         self.defineHisto("MET_pt", "MET pT", (25, 0.0, 300.0))
         self.defineHisto("LeadingMuon_pt", "Leading Muon pT", (50, 0.0, 200.0))
+        self.defineHisto("LeadingMuon_eta", "Jet eta", (30, -2.1, 2.1))
         self.defineHisto(
             "LeadingMuon_relIso", "Leading Muon relative isolation", (25, 0.0, 0.3)
         )
         self.defineHisto("NMuon", "# of isolated muons", (5, 0.5, 5.5))
-        self.defineHisto("BDTscore", "BDT score", (20, -1.0, 1.0))
+        self.defineHisto("BDTscore", "BDT score", (30, -1.0, 1.0))
         self.defineHisto("MedianJet_dR", "Median dR between jets", (25, 0.0, 5.0))
         self.defineHisto(
             "InvariantMass_LeastBtaggedJets",
