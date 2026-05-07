@@ -109,7 +109,7 @@ def fit_data_norms(h_data, sig_shape, bkg_shape, tag):
     f.SetLineColor(ROOT.kBlack)
     f.SetLineWidth(2)
 
-    h_data.Fit(f, "RQS", "", 30, xmax)
+    h_data.Fit(f, "WRQS", "", 30, xmax)
 
     N_sig = f.GetParameter(0)
     eN_sig = f.GetParError(0)
